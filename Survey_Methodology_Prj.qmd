@@ -4,23 +4,27 @@ format: html
 editor: visual
 ---
 
-## Quarto
-
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
-
-## Running Code
-
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+:
 
 ```{r}
-1 + 1
+library(haven)
+library(tidyverse)
+
 ```
 
 You can add options to executable code like this
 
 ```{r}
-#| echo: false
-2 * 2
+data <- read_dta("ZA7575.dta")
+
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+```{r}
+data_df <- data |> dplyr::select(serialid,isocntry, d70,d71_1,d71_2,d71_3,d72_1,d72_2,polintr, d11,d10,d25,d1,d63,d8, sd2_1,sd2_2,sd2_3,sd2_4,sd2_5,sd2_6,sd2_7,sd2_8,qc5_1,qc5_2, qc5_3,qc5_4, qc7,qc15_1,qc15_2, qc15_3,qc17_3,qc17_4,qc17_5,qc19,qc20, d15a,sd3,qc1_4,qc1_8,qc1_10,d7r3,d62t,opls) 
+
+#changing the name of columns
+data_df <- data_df |> rename(Country=isocntry,lifesat=d70,natmat=d71_1, eumat=d71_2,locmat=d71_3,euvoice=d72_1, natvoice=d72_2,age=d11,gender=d10,community=d25,ideo=d1,class=d63,eduyears=d8,ethnic=sd2_1, skin=sd2_2,relig=sd2_3, roma=sd2_4, sex=sd2_5,disab=sd2_6,other=sd2_7, none_min=sd2_8,oncontent=qc5_1,pubdef=qc5_2,campaign=qc5_3,workplace=qc5_4,fightdisc=qc7,suprights=qc15_1, suprelation=qc15_2,supmarriage=qc15_3,ch_marriage=d7r3, schsexor=qc17_3,schtrans=qc17_4,schinter=qc17_5,policy_id=qc19, policy_sex=qc20,occup=d15a,religion=sd3, sexdiscr=qc1_4,transdiscr=qc1_8, interdiscr=qc1_10, inter_usage=d62t,leadership = opls)
+
+write_csv(data_df, "data", col_names = TRUE)
+
+```
