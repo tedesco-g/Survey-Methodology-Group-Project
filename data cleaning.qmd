@@ -1,0 +1,111 @@
+---
+title: "assignment"
+format: html
+editor: visual
+---
+
+```{r}
+library(haven)
+library(tidyverse)
+library(naniar)
+library(visdat)
+library(mice)
+library(GGally)
+library(corrplot)
+library(randomForest)
+library(ggcorrplot)
+```
+
+```{r}
+data <- read_dta("ZA7575.dta")
+
+
+data <- data %>%
+  mutate(across(where(is.labelled), as.numeric))
+```
+
+```{r}
+
+data <- data |> 
+ select(where(is.numeric))|>
+  select(-c(edition,studyno1, studyno2,survey, caseid, uniqid))
+
+```
+
+```{r}
+
+total_missing <- sum(is.na(data))
+cat("Total Missing:", total_missing, "\n")
+
+missing_per_column <- colSums(is.na(data))
+
+missing_df <- data.frame(Variable = names(missing_per_column), 
+                         Missing_Count = missing_per_column, 
+                         Missing_Percentage = (missing_per_column / nrow(data)) * 100)
+
+missing_df <- missing_df[order(-missing_df$Missing_Percentage), ]
+print(missing_df)
+
+vis_miss(data, warn_large_data = FALSE)
+
+high_missing <- missing_df[missing_df$Missing_Percentage < 50, ]
+print(high_missing)
+```
+
+```{r}
+
+missing_per_row <- rowSums(is.na(data))
+
+head(sort(missing_per_row, decreasing = TRUE), 10)
+
+
+
+
+```
+
+```{r}
+
+missing_per_column <- sort(missing_per_column, decreasing = TRUE)
+
+print(missing_per_column[1:10])
+
+```
+
+```{r}
+high_missing_vars <- names(missing_per_column[missing_per_column >50])
+
+data <- data[, !(names(data) %in% high_missing_vars)]
+
+constant_vars <- names(Filter(function(x) length(unique(x)) == 1, data))
+data <- data[, !(names(data) %in% constant_vars)]
+
+
+```
+
+```{r}
+
+library(caret)
+cor_matrix <- cor(data[, sapply(data, is.numeric)], use = "pairwise.complete.obs")
+high_cor <- findCorrelation(cor_matrix, cutoff = 0.9)  
+data <- data[, -high_cor]
+
+
+pred_matrix <- quickpred(data, mincor = 0.1)
+```
+
+```{r}
+imputed_data <- mice(data, method = "pmm", m = 5, maxit = 5, pred = pred_matrix, seed = 123)
+
+data_clean <- complete(imputed_data)
+
+
+sum(is.na(data_clean)) 
+
+summary(data_clean)
+
+
+colSums(is.na(data_clean))
+
+
+
+```
