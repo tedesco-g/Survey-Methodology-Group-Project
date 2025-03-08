@@ -14,6 +14,7 @@ library(GGally)
 library(corrplot)
 library(randomForest)
 library(ggcorrplot)
+library(reshape2)
 ```
 
 ```{r}
@@ -107,5 +108,91 @@ summary(data_clean)
 colSums(is.na(data_clean))
 
 
+
+```
+
+Additional imputation application, I did comparison with other imputation style. We can save whatever we want \<3
+
+```{r}
+library(mice)
+
+# List of different imputation methods to test
+method_list <- c("pmm", "logreg", "polyreg", "rf", "cart")
+
+# Store the imputed datasets
+imputed_datasets <- list()
+
+for (method in method_list) {
+  cat("\nRunning:", method, "...\n")
+  
+  # Perform imputation using the selected method
+  imputed_datasets[[method]] <- mice(data, method = method, m = 5, maxit = 5, seed = 123)
+}
+```
+
+```{r}
+# Extract `qc19` from each imputation method
+plot_data<- data.frame(
+  Original = as.numeric(data[["qc19"]]),  # Extract from original dataset
+  PMM = as.numeric(complete(imputed_datasets[["pmm"]], 1)[["qc19"]]),  # Predictive Mean Matching (PMM)
+  LogReg = as.numeric(complete(imputed_datasets[["logreg"]], 1)[["qc19"]]),  # Logistic Regression
+  PolyReg = as.numeric(complete(imputed_datasets[["polyreg"]], 1)[["qc19"]]),  # Polynomial Regression
+  RF = as.numeric(complete(imputed_datasets[["rf"]], 1)[["qc19"]]),  # Random Forest
+  CART = as.numeric(complete(imputed_datasets[["cart"]], 1)[["qc19"]])  # Classification and Regression Trees (CART)
+)
+
+
+# Convert to long format
+plot_data <- plot_data %>%
+  pivot_longer(cols = -Original, names_to = "Method", values_to = "Value")
+
+# Check if the reshaped data looks correct
+head(plot_data)
+
+
+ggplot(plot_data, aes(x = Value, fill = Method)) +
+  geom_histogram(binwidth = 1, alpha = 0.6, position = "identity") +
+  facet_wrap(~ Method, scales = "free") +  # Separate plots for each method
+  ggtitle("Comparison of Imputation Methods for qc19") +
+  theme_minimal() +
+  theme(legend.position = "bottom") +
+  labs(x = "qc19 Values", y = "Frequency", fill = "Imputation Method")
+
+
+
+ggplot(plot_data, aes(x = Method, y = Value, fill = Method)) +
+  geom_boxplot(alpha = 0.7) +
+  ggtitle("Boxplot of Imputed Values for qc19") +
+  theme_minimal() +
+  labs(x = "Imputation Method", y = "qc19 Value", fill = "Method") +
+  theme(legend.position = "none")  # Remove legend since it's redundant
+
+
+ggplot(plot_data, aes(x = Value, fill = Method)) +
+  geom_histogram(binwidth = 1, alpha = 0.6, position = "identity") +
+  facet_wrap(~ Method, scales = "free") +  
+  ggtitle("Comparison of Imputation Methods for qc19 (Including Original Data)") +
+  theme_minimal() +
+  theme(legend.position = "bottom") +
+  labs(x = "qc19 Values", y = "Frequency", fill = "Imputation Method") +
+  geom_histogram(data = filter(plot_data, Method == "Original"), 
+                 aes(x = Value), fill = "black", alpha = 0.3)  # Overlay original data
+
+
+plot_data %>%
+  group_by(Method) %>%
+  summarise(
+    Mean = mean(Value, na.rm = TRUE),
+    Median = median(Value, na.rm = TRUE),
+    SD = sd(Value, na.rm = TRUE)
+  ) %>%
+  print()
+
+
+ggplot(plot_data, aes(x = Value, color = Method)) +
+  geom_density(linewidth = 1) +
+  ggtitle("Density Plot of Imputed Values for qc19") +
+  theme_minimal() +
+  labs(x = "qc19 Values", y = "Density", color = "Imputation Method")
 
 ```
