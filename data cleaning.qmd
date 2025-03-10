@@ -222,6 +222,23 @@ ggplot(qc19_country_gender_dist, aes(x = gender, y = count, fill = gender)) +
   theme_minimal(base_size = 14) +
   theme(legend.position = "none")
 
+
 ```
 
-hi
+```{r}
+data$isocntry <- reorder(data$isocntry, as.numeric(data$qc19), mean)  # Order by mean qc19 response
+
+ggplot(data, aes(x = isocntry, y = as.numeric(qc19))) +
+  geom_violin(width = 0.9, fill = "lightblue", color = "black") +  # Make violins wider
+  geom_boxplot(width = 0.2, outlier.shape = NA) +  # Add boxplot overlay
+  stat_summary(fun = mean, geom = "point", color = "red", size = 2) +  # Highlight means
+  scale_y_continuous(breaks = c(1, 2, 3), labels = c("Yes", "No", "DK")) +
+  labs(title = "Distribution of qc19 Responses by Country (Ordered by Mean)",
+     x = "Country", y = "qc19 Response Score") +
+theme_minimal() +
+theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),  # Adjust font size
+      plot.title = element_text(size = 14, face = "bold")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
