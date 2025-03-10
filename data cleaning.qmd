@@ -21,24 +21,23 @@ library(reshape2)
 data <- read_dta("ZA7575.dta")
 
 
-data <- data %>%
+data_clean <- data %>%
   mutate(across(where(is.labelled), as.numeric))
 ```
 
 ```{r}
 
-data <- data |> 
+data_clean <- data_clean |> 
  select(where(is.numeric))|>
   select(-c(edition,studyno1, studyno2,survey, caseid, uniqid))
-
 ```
 
 ```{r}
 
-total_missing <- sum(is.na(data))
+total_missing <- sum(is.na(data_clean))
 cat("Total Missing:", total_missing, "\n")
 
-missing_per_column <- colSums(is.na(data))
+missing_per_column <- colSums(is.na(data_clean))
 
 missing_df <- data.frame(Variable = names(missing_per_column), 
                          Missing_Count = missing_per_column, 
@@ -47,18 +46,16 @@ missing_df <- data.frame(Variable = names(missing_per_column),
 missing_df <- missing_df[order(-missing_df$Missing_Percentage), ]
 print(missing_df)
 
-vis_miss(data, warn_large_data = FALSE)
 
-high_missing <- missing_df[missing_df$Missing_Percentage < 50, ]
+high_missing <- missing_df[missing_df$Missing_Percentage > 50, ]
 print(high_missing)
 ```
 
 ```{r}
 
-missing_per_row <- rowSums(is.na(data))
+missing_per_row <- rowSums(is.na(data_clean))
 
 head(sort(missing_per_row, decreasing = TRUE), 10)
-
 
 
 
@@ -75,10 +72,10 @@ print(missing_per_column[1:10])
 ```{r}
 high_missing_vars <- names(missing_per_column[missing_per_column >50])
 
-data <- data[, !(names(data) %in% high_missing_vars)]
+data_clean <- data_clean[, !(names(data_clean) %in% high_missing_vars)]
 
 constant_vars <- names(Filter(function(x) length(unique(x)) == 1, data))
-data <- data[, !(names(data) %in% constant_vars)]
+data_clean <- data_clean[, !(names(data_clean) %in% constant_vars)]
 
 
 ```
@@ -86,34 +83,17 @@ data <- data[, !(names(data) %in% constant_vars)]
 ```{r}
 
 library(caret)
-cor_matrix <- cor(data[, sapply(data, is.numeric)], use = "pairwise.complete.obs")
+cor_matrix <- cor(data_clean[, sapply(data_clean, is.numeric)], use = "pairwise.complete.obs")
 high_cor <- findCorrelation(cor_matrix, cutoff = 0.9)  
-data <- data[, -high_cor]
+data_clean <- data_clean[, -high_cor]
 
 
 pred_matrix <- quickpred(data, mincor = 0.1)
 ```
 
 ```{r}
-imputed_data <- mice(data, method = "pmm", m = 5, maxit = 5, pred = pred_matrix, seed = 123)
 
-data_clean <- complete(imputed_data)
-
-
-sum(is.na(data_clean)) 
-
-summary(data_clean)
-
-
-colSums(is.na(data_clean))
-
-
-
-```
-
-Additional imputation application, I did comparison with other imputation style. We can save whatever we want \<3
-
-```{r}
+ 
 library(mice)
 
 # List of different imputation methods to test
@@ -126,73 +106,122 @@ for (method in method_list) {
   cat("\nRunning:", method, "...\n")
   
   # Perform imputation using the selected method
-  imputed_datasets[[method]] <- mice(data, method = method, m = 5, maxit = 5, seed = 123)
+  imputed_datasets[[method]] <- mice(data_clean, method = method, m = 5, maxit = 5, seed = 123)
 }
+
+
 ```
 
 ```{r}
-# Extract `qc19` from each imputation method
-plot_data<- data.frame(
-  Original = as.numeric(data[["qc19"]]),  # Extract from original dataset
-  PMM = as.numeric(complete(imputed_datasets[["pmm"]], 1)[["qc19"]]),  # Predictive Mean Matching (PMM)
-  LogReg = as.numeric(complete(imputed_datasets[["logreg"]], 1)[["qc19"]]),  # Logistic Regression
-  PolyReg = as.numeric(complete(imputed_datasets[["polyreg"]], 1)[["qc19"]]),  # Polynomial Regression
-  RF = as.numeric(complete(imputed_datasets[["rf"]], 1)[["qc19"]]),  # Random Forest
-  CART = as.numeric(complete(imputed_datasets[["cart"]], 1)[["qc19"]])  # Classification and Regression Trees (CART)
+
+data_comparison <- data.frame(
+  Original = as.numeric(data_clean[["qc19"]]),  # Original before imputation
+  PMM = as.numeric(complete(imputed_datasets[["pmm"]])[["qc19"]]),  
+  RF = as.numeric(complete(imputed_datasets[["rf"]])[["qc19"]]),  
+  CART = as.numeric(complete(imputed_datasets[["cart"]])[["qc19"]]),  
+  LogReg = as.numeric(complete(imputed_datasets[["logreg"]])[["qc19"]]),  
+  PolyReg = as.numeric(complete(imputed_datasets[["polyreg"]])[["qc19"]])  
 )
 
 
-# Convert to long format
-plot_data <- plot_data %>%
-  pivot_longer(cols = -Original, names_to = "Method", values_to = "Value")
 
-# Check if the reshaped data looks correct
-head(plot_data)
+# Reshape data into long format for ggplot
+plot_data <- melt(data_comparison, variable.name = "Method", value.name = "qc19_values")
 
-
-ggplot(plot_data, aes(x = Value, fill = Method)) +
+# Plot using ggplot
+ggplot(plot_data, aes(x = qc19_values, fill = Method)) +
   geom_histogram(binwidth = 1, alpha = 0.6, position = "identity") +
-  facet_wrap(~ Method, scales = "free") +  # Separate plots for each method
-  ggtitle("Comparison of Imputation Methods for qc19") +
-  theme_minimal() +
-  theme(legend.position = "bottom") +
-  labs(x = "qc19 Values", y = "Frequency", fill = "Imputation Method")
+  facet_wrap(~Method, scales = "free_y") +  # Separate plots for each method
+  labs(title = "Comparison of Imputation Methods for qc19 (Including Original Data)",
+       x = "qc19 Values", y = "Frequency") +
+  theme_minimal()
 
-
-
-ggplot(plot_data, aes(x = Method, y = Value, fill = Method)) +
-  geom_boxplot(alpha = 0.7) +
-  ggtitle("Boxplot of Imputed Values for qc19") +
-  theme_minimal() +
-  labs(x = "Imputation Method", y = "qc19 Value", fill = "Method") +
-  theme(legend.position = "none")  # Remove legend since it's redundant
-
-
-ggplot(plot_data, aes(x = Value, fill = Method)) +
-  geom_histogram(binwidth = 1, alpha = 0.6, position = "identity") +
-  facet_wrap(~ Method, scales = "free") +  
-  ggtitle("Comparison of Imputation Methods for qc19 (Including Original Data)") +
-  theme_minimal() +
-  theme(legend.position = "bottom") +
-  labs(x = "qc19 Values", y = "Frequency", fill = "Imputation Method") +
-  geom_histogram(data = filter(plot_data, Method == "Original"), 
-                 aes(x = Value), fill = "black", alpha = 0.3)  # Overlay original data
-
-
-plot_data %>%
-  group_by(Method) %>%
-  summarise(
-    Mean = mean(Value, na.rm = TRUE),
-    Median = median(Value, na.rm = TRUE),
-    SD = sd(Value, na.rm = TRUE)
-  ) %>%
-  print()
-
-
-ggplot(plot_data, aes(x = Value, color = Method)) +
-  geom_density(linewidth = 1) +
-  ggtitle("Density Plot of Imputed Values for qc19") +
-  theme_minimal() +
-  labs(x = "qc19 Values", y = "Density", color = "Imputation Method")
 
 ```
+
+```{r}
+numeric_vars <- data_clean %>% select(where(is.numeric))
+
+cor_matrix <- cor(numeric_vars, use = "complete.obs")
+
+qc19_correlations <- sort(cor_matrix["qc19", ], decreasing = TRUE)
+
+print(qc19_correlations)
+
+
+top_correlations <- sort(qc19_correlations, decreasing = TRUE)
+
+
+top_20 <- head(top_correlations, 20)
+
+
+
+ggplot(data.frame(Variable = names(top_20), Correlation = top_20), aes(x = reorder(Variable, Correlation), y = Correlation)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  labs(title = "High Correlation with qc19 ", x = "Variable", y = "Correlation") +
+  theme_minimal()
+
+top_vars <- c("qc20", "qc15_3", "qc15_2","qc15_1","qc17_3", "qc17_5") 
+
+for (var in top_vars) {
+  print(ggplot(data , aes_string(x = var)) +
+    geom_histogram(fill = "blue", bins = 30) +
+    labs(title = paste("Distrubition:", var), x = var, y = "Frequency") +
+    theme_minimal())
+}
+
+
+library(haven) 
+data<- data %>%
+  mutate(qc19 = as_factor(qc19))
+
+
+```
+
+```{r}
+
+data <- data %>%
+  mutate(qc19 = as_factor(qc19),
+         gender = as_factor(d10))
+
+qc19_country_gender_dist <- data%>%
+  group_by(isocntry, gender, qc19) %>%
+  summarise(count = n(), .groups = 'drop')
+
+
+ggplot(qc19_country_gender_dist, aes(x = qc19, y = count, fill = gender)) +
+  geom_col(position = "dodge", width = 0.7) +  # Dodge to separate gender groups
+  facet_wrap(~isocntry, scales = "free_y") +  # Facet by country
+  scale_fill_manual(values = c("Man" = "#3C8BFA", "Woman" = "#663CFA")) +  # Gender colors
+  labs(title = "Distribution of qc19 Responses by Country and Gender",
+       x = "Response Type", y = "Response Count", fill = "Gender") +
+  theme_minimal(base_size = 10) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 6),  
+    legend.position = "bottom",
+        legend.text = element_text(size = 8),
+     legend.title = element_text(size = 9, face = "bold"),
+      legend.key.size = unit(0.4, "cm"),
+    panel.grid.major.x = element_blank(),
+    strip.text = element_text(size = 8, face = "bold"),  # Small facet title
+    strip.background = element_rect(fill = "gray90", color = "black") +
+      annotate("text", x = 2, y = max(qc19_country_gender_dist$count) + 20, 
+           label = "Response Type", size = 5, fontface = "bold", vjust = -1.3)  # Add "Response Type"# Facet label style
+  )
+
+```
+
+```{r}
+ggplot(qc19_country_gender_dist, aes(x = gender, y = count, fill = gender)) +
+  geom_boxplot() +
+  facet_wrap(~qc19) +  
+  scale_fill_manual(values = c("Man" = "#3C8BFA", "Woman" = "#663CFA")) +
+  labs(title = "Distribution of qc19 Responses by Gender",
+       x = "Gender", y = "Response Count") +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "none")
+
+```
+
+hi
