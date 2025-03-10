@@ -1,0 +1,61 @@
+---
+title: "WDI_UNESCO_Education_Data"
+format: html
+editor: visual
+---
+
+## Quarto
+
+```{r}
+library(tidyverse)
+library(WDI)
+```
+
+```{r}
+unesco_data <- read.csv("unesco_data.csv")
+
+unesco_wide <- unesco_data %>%
+  mutate(Level = case_when(
+    indicatorId == "XSPENDP.02.FDPUB.FNCUR" ~ "PrePrimary (XSPENDP.02.FDPUB.FNCUR)",
+    indicatorId == "XSPENDP.1.FDPUB.FNCUR"  ~ "Primary (XSPENDP.1.FDPUB.FNCUR)",
+    indicatorId == "XSPENDP.2.FDPUB.FNCUR"  ~ "LowerSecondary (XSPENDP.2.FDPUB.FNCUR)",
+    indicatorId == "XSPENDP.2T3.FDPUB.FNCUR" ~ "UpperSecondary (XSPENDP.2T3.FDPUB.FNCUR)",
+    indicatorId == "XSPENDP.3.FDPUB.FNCUR"  ~ "Tertiary (XSPENDP.3.FDPUB.FNCUR)",
+    indicatorId == "XSPENDP.4.FDPUB.FNCUR"  ~ "VocationalTraining (XSPENDP.4.FDPUB.FNCUR)",
+    TRUE ~ indicatorId  # fallback in case of unexpected codes
+  )) %>%
+  select(-indicatorId) %>%
+  pivot_wider(names_from = Level, values_from = value)
+
+```
+
+```{r}
+unesco_wide <- unesco_wide %>%
+  rename(iso3c = geoUnit)
+
+unesco_wide <- unesco_wide %>%
+  select(-qualifier, -magnitude)
+
+
+
+# Define the ISO-3 country codes for your list of countries
+countries <- c("BEL", "DNK", "DEU", "GRC", "ESP", "FRA", "IRL", "ITA", 
+               "LUX", "NLD", "PRT", "GBR", "AUT", "SWE", "FIN", "CYP", 
+               "CZE", "EST", "HUN", "LVA", "LTU", "MLT", "POL", "SVK", 
+               "SVN", "BGR", "ROU", "HRV")
+
+# Define the indicators: GDP (current US$) and Education Expenditure (% of GDP)
+indicators <- c("NY.GDP.MKTP.CD", "SE.XPD.TOTL.GD.ZS")
+
+# Download data for a specific year, e.g., 2020
+edueco_data <- WDI(country = countries, indicator = indicators, start = 2019, end = 2019)
+print(edueco_data)
+
+edueco_joined <- edueco_data %>%
+  left_join(unesco_wide, by = c("iso3c", "year"))
+
+```
+
+```{r}
+head(edueco_joined)
+```
