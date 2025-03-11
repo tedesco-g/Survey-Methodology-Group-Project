@@ -274,11 +274,11 @@ library(dplyr)
 # Step 1: Select relevant columns from filtered_data
 selected_data <- filtered_data |>
   select(c(
-    "serialid", "d70", "d71_1", "d71_2", "d71_3", "d72_1", "d72_2", "polintr", "d10", "d25", "d1", "d63", "sd2_1", "sd2_2", "sd2_3", "sd2_4", "sd2_5", "sd2_6", "sd2_7", "sd3", "qc1_4", "qc1_8", "qc1_10", "d8r1", "d8r2", "d8"))
+    "serialid", "d70", "d71_1", "d71_2", "d71_3", "d72_1", "d72_2", "polintr", "d10", "d25", "d1", "d63", "sd2_1", "sd2_2", "sd2_3", "sd2_4", "sd2_5", "sd2_6", "sd2_7", "sd3", "qc1_4", "qc1_8", "qc1_10", "d8r1", "d8r2", "d8", "qc19"))
 
 # Step 2: Select relevant columns from `data`
 country_data <- data |>
-  select("serialid", "isocntry", "qc17_4", "qc17_3", "qc17_5", "qc19")
+  select("serialid", "isocntry", "qc17_4", "qc17_3", "qc17_5")
 
 # Step 3: Merge country_data with edueco_data based on country codes
 country_data <- country_data %>%
@@ -333,12 +333,6 @@ merged_data <- merged_data |> rename(
   
   
 write.csv(merged_data, "final_data.csv", col.names = TRUE)
-
-
-
-```
-
-```{r}
 
 
 ```
