@@ -58,4 +58,8 @@ edueco_joined <- edueco_data %>%
 
 ```{r}
 head(edueco_joined)
+
+write.csv(edueco_joined, file = "edueco_data.csv",col.names = TRUE)
+
+
 ```
