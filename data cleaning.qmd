@@ -15,29 +15,37 @@ library(corrplot)
 library(randomForest)
 library(ggcorrplot)
 library(reshape2)
+library(readr)
 ```
 
 ```{r}
 data <- read_dta("ZA7575.dta")
 
 
-data_clean <- data %>%
-  mutate(across(where(is.labelled), as.numeric))
+edueco_data <- read_csv("UNESCO Edu Country Data 2019/edueco_data.csv")
+
+merged_data <- data %>%
+  inner_join(edueco_data, by = c("isocntry" = "iso2c"))
 ```
 
 ```{r}
 
-data_clean <- data_clean |> 
+merged_data<- merged_data %>%
+  mutate(across(where(is.labelled), as.numeric))
+
+merged_data <- merged_data |> 
  select(where(is.numeric))|>
   select(-c(edition,studyno1, studyno2,survey, caseid, uniqid))
+
+
 ```
 
 ```{r}
 
-total_missing <- sum(is.na(data_clean))
+total_missing <- sum(is.na(merged_data))
 cat("Total Missing:", total_missing, "\n")
 
-missing_per_column <- colSums(is.na(data_clean))
+missing_per_column <- colSums(is.na(merged_data))
 
 missing_df <- data.frame(Variable = names(missing_per_column), 
                          Missing_Count = missing_per_column, 
@@ -53,7 +61,7 @@ print(high_missing)
 
 ```{r}
 
-missing_per_row <- rowSums(is.na(data_clean))
+missing_per_row <- rowSums(is.na(merged_data))
 
 head(sort(missing_per_row, decreasing = TRUE), 10)
 
@@ -72,10 +80,10 @@ print(missing_per_column[1:10])
 ```{r}
 high_missing_vars <- names(missing_per_column[missing_per_column >50])
 
-data_clean <- data_clean[, !(names(data_clean) %in% high_missing_vars)]
+merged_data <- merged_data[, !(names(merged_data) %in% high_missing_vars)]
 
 constant_vars <- names(Filter(function(x) length(unique(x)) == 1, data))
-data_clean <- data_clean[, !(names(data_clean) %in% constant_vars)]
+merged_data <- merged_data[, !(names(merged_data) %in% constant_vars)]
 
 
 ```
@@ -83,12 +91,29 @@ data_clean <- data_clean[, !(names(data_clean) %in% constant_vars)]
 ```{r}
 
 library(caret)
-cor_matrix <- cor(data_clean[, sapply(data_clean, is.numeric)], use = "pairwise.complete.obs")
-high_cor <- findCorrelation(cor_matrix, cutoff = 0.9)  
-data_clean <- data_clean[, -high_cor]
+# Select only numeric variables
+numeric_data <- merged_data[, sapply(merged_data, is.numeric)]
 
+# Identify and remove constant variables (zero standard deviation)
+zero_sd_vars <- sapply(numeric_data, function(x) sd(x, na.rm = TRUE) == 0)
+numeric_data <- numeric_data[, !zero_sd_vars]
 
-pred_matrix <- quickpred(data, mincor = 0.1)
+# Identify and remove columns with missing values (alternatively, you can impute them)
+numeric_data <- numeric_data[, colSums(is.na(numeric_data)) == 0]
+
+# Compute the correlation matrix
+cor_matrix <- cor(numeric_data, use = "pairwise.complete.obs")
+
+print(cor_matrix)
+
+high_cor <- findCorrelation(cor_matrix, cutoff = 0.90) 
+
+print(high_cor)
+
+filtered_data <- numeric_data[, -high_cor]
+
+head(filtered_data)
+
 ```
 
 ```{r}
@@ -106,7 +131,7 @@ for (method in method_list) {
   cat("\nRunning:", method, "...\n")
   
   # Perform imputation using the selected method
-  imputed_datasets[[method]] <- mice(data_clean, method = method, m = 5, maxit = 5, seed = 123)
+  imputed_datasets[[method]] <- mice(filtered_data, method = method, m = 5, maxit = 5, seed = 123)
 }
 
 
@@ -115,7 +140,7 @@ for (method in method_list) {
 ```{r}
 
 data_comparison <- data.frame(
-  Original = as.numeric(data_clean[["qc19"]]),  # Original before imputation
+  Original = as.numeric(filtered_data[["qc19"]]),  # Original before imputation
   PMM = as.numeric(complete(imputed_datasets[["pmm"]])[["qc19"]]),  
   RF = as.numeric(complete(imputed_datasets[["rf"]])[["qc19"]]),  
   CART = as.numeric(complete(imputed_datasets[["cart"]])[["qc19"]]),  
@@ -140,7 +165,7 @@ ggplot(plot_data, aes(x = qc19_values, fill = Method)) +
 ```
 
 ```{r}
-numeric_vars <- data_clean %>% select(where(is.numeric))
+numeric_vars <- filtered_data %>% select(where(is.numeric))
 
 cor_matrix <- cor(numeric_vars, use = "complete.obs")
 
