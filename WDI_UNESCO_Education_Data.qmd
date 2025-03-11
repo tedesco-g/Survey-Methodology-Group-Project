@@ -6,11 +6,10 @@ editor: visual
 
 ## Quarto
 
-
 ```{r}
 library(dplyr)
 library(tidyr)
-``` 
+```
 
 ```{r}
 unesco_wide <- unesco_data %>%
