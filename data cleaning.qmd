@@ -38,6 +38,7 @@ merged_data <- merged_data |>
   select(-c(edition,studyno1, studyno2,survey, caseid, uniqid))
 
 
+
 ```
 
 ```{r}
@@ -75,6 +76,7 @@ missing_per_column <- sort(missing_per_column, decreasing = TRUE)
 
 print(missing_per_column[1:10])
 
+
 ```
 
 ```{r}
@@ -85,21 +87,17 @@ merged_data <- merged_data[, !(names(merged_data) %in% high_missing_vars)]
 constant_vars <- names(Filter(function(x) length(unique(x)) == 1, data))
 merged_data <- merged_data[, !(names(merged_data) %in% constant_vars)]
 
-
 ```
 
 ```{r}
 
 library(caret)
-# Select only numeric variables
+
 numeric_data <- merged_data[, sapply(merged_data, is.numeric)]
 
 # Identify and remove constant variables (zero standard deviation)
 zero_sd_vars <- sapply(numeric_data, function(x) sd(x, na.rm = TRUE) == 0)
 numeric_data <- numeric_data[, !zero_sd_vars]
-
-# Identify and remove columns with missing values (alternatively, you can impute them)
-numeric_data <- numeric_data[, colSums(is.na(numeric_data)) == 0]
 
 # Compute the correlation matrix
 cor_matrix <- cor(numeric_data, use = "pairwise.complete.obs")
@@ -122,7 +120,7 @@ head(filtered_data)
 library(mice)
 
 # List of different imputation methods to test
-method_list <- c("pmm", "logreg", "polyreg", "rf", "cart")
+method_list <- c("pmm", "rf", "cart")
 
 # Store the imputed datasets
 imputed_datasets <- list()
@@ -131,7 +129,7 @@ for (method in method_list) {
   cat("\nRunning:", method, "...\n")
   
   # Perform imputation using the selected method
-  imputed_datasets[[method]] <- mice(filtered_data, method = method, m = 5, maxit = 5, seed = 123)
+  imputed_datasets[[method]] <- mice(filtered_data, method = method, m = 2, maxit = 2, seed = 123)
 }
 
 
@@ -140,24 +138,25 @@ for (method in method_list) {
 ```{r}
 
 data_comparison <- data.frame(
-  Original = as.numeric(filtered_data[["qc19"]]),  # Original before imputation
+  Original = as.numeric(numeric_data[["qc19"]]),  # Original before imputation
   PMM = as.numeric(complete(imputed_datasets[["pmm"]])[["qc19"]]),  
   RF = as.numeric(complete(imputed_datasets[["rf"]])[["qc19"]]),  
-  CART = as.numeric(complete(imputed_datasets[["cart"]])[["qc19"]]),  
-  LogReg = as.numeric(complete(imputed_datasets[["logreg"]])[["qc19"]]),  
-  PolyReg = as.numeric(complete(imputed_datasets[["polyreg"]])[["qc19"]])  
+  CART = as.numeric(complete(imputed_datasets[["cart"]])[["qc19"]])  
 )
 
 
 
-# Reshape data into long format for ggplot
-plot_data <- melt(data_comparison, variable.name = "Method", value.name = "qc19_values")
+library(reshape2)
+
+# Ensure there's an ID column (e.g., "Method")
+plot_data <- melt(data_comparison, 
+                  variable.name = "Method", value.name = "qc19_values")
 
 # Plot using ggplot
 ggplot(plot_data, aes(x = qc19_values, fill = Method)) +
   geom_histogram(binwidth = 1, alpha = 0.6, position = "identity") +
   facet_wrap(~Method, scales = "free_y") +  # Separate plots for each method
-  labs(title = "Comparison of Imputation Methods for qc19 (Including Original Data)",
+  labs(title = "Comparison of Imputation Methods",
        x = "qc19 Values", y = "Frequency") +
   theme_minimal()
 
@@ -265,5 +264,9 @@ theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),  # Adjust fo
       plot.title = element_text(size = 14, face = "bold")) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+```{r}
 
 ```
