@@ -24,16 +24,15 @@ data <- read_dta("ZA7575.dta")
 
 edueco_data <- read_csv("UNESCO Edu Country Data 2019/edueco_data.csv")
 
-merged_data <- data %>%
-  inner_join(edueco_data, by = c("isocntry" = "iso2c"))
+
 ```
 
 ```{r}
 
-merged_data<- merged_data %>%
+data_clean<- data %>%
   mutate(across(where(is.labelled), as.numeric))
 
-merged_data <- merged_data |> 
+data_clean <- data_clean |> 
  select(where(is.numeric))|>
   select(-c(edition,studyno1, studyno2,survey, caseid, uniqid))
 
@@ -43,10 +42,10 @@ merged_data <- merged_data |>
 
 ```{r}
 
-total_missing <- sum(is.na(merged_data))
+total_missing <- sum(is.na(data_clean))
 cat("Total Missing:", total_missing, "\n")
 
-missing_per_column <- colSums(is.na(merged_data))
+missing_per_column <- colSums(is.na(data_clean))
 
 missing_df <- data.frame(Variable = names(missing_per_column), 
                          Missing_Count = missing_per_column, 
@@ -62,7 +61,7 @@ print(high_missing)
 
 ```{r}
 
-missing_per_row <- rowSums(is.na(merged_data))
+missing_per_row <- rowSums(is.na(data_clean))
 
 head(sort(missing_per_row, decreasing = TRUE), 10)
 
@@ -82,10 +81,10 @@ print(missing_per_column[1:10])
 ```{r}
 high_missing_vars <- names(missing_per_column[missing_per_column >50])
 
-merged_data <- merged_data[, !(names(merged_data) %in% high_missing_vars)]
+data_clean <- data_clean[, !(names(data_clean) %in% high_missing_vars)]
 
-constant_vars <- names(Filter(function(x) length(unique(x)) == 1, data))
-merged_data <- merged_data[, !(names(merged_data) %in% constant_vars)]
+constant_vars <- names(Filter(function(x) length(unique(x)) == 1, data_clean))
+data_clean <- data_clean[, !(names(data_clean) %in% constant_vars)]
 
 ```
 
@@ -93,10 +92,12 @@ merged_data <- merged_data[, !(names(merged_data) %in% constant_vars)]
 
 library(caret)
 
-numeric_data <- merged_data[, sapply(merged_data, is.numeric)]
+numeric_data <- data_clean[, sapply(data_clean, is.numeric)]
 
-# Identify and remove constant variables (zero standard deviation)
+# Identify constant columns (standard deviation = 0)
 zero_sd_vars <- sapply(numeric_data, function(x) sd(x, na.rm = TRUE) == 0)
+
+# Remove constant columns
 numeric_data <- numeric_data[, !zero_sd_vars]
 
 # Compute the correlation matrix
@@ -129,7 +130,7 @@ for (method in method_list) {
   cat("\nRunning:", method, "...\n")
   
   # Perform imputation using the selected method
-  imputed_datasets[[method]] <- mice(filtered_data, method = method, m = 2, maxit = 2, seed = 123)
+  imputed_datasets[[method]] <- mice(data_clean, method = method, m = 3, maxit = 3, seed = 123)
 }
 
 
@@ -177,7 +178,6 @@ top_correlations <- sort(qc19_correlations, decreasing = TRUE)
 
 
 top_20 <- head(top_correlations, 20)
-
 
 
 ggplot(data.frame(Variable = names(top_20), Correlation = top_20), aes(x = reorder(Variable, Correlation), y = Correlation)) +
@@ -268,5 +268,76 @@ theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),  # Adjust fo
 ```
 
 ```{r}
+
+library(dplyr)
+
+# Step 1: Select relevant columns from filtered_data
+selected_data <- filtered_data |>
+  select(c(
+    "serialid", "d70", "d71_1", "d71_2", "d71_3", "d72_1", "d72_2", "polintr", "d10", "d25", "d1", "d63", "sd2_1", "sd2_2", "sd2_3", "sd2_4", "sd2_5", "sd2_6", "sd2_7", "sd3", "qc1_4", "qc1_8", "qc1_10", "d8r1", "d8r2", "d8" ))
+
+# Step 2: Select relevant columns from `data`
+country_data <- data |>
+  select("serialid", "isocntry", "qc17_4", "qc17_3", "qc17_5")
+
+# Step 3: Merge country_data with edueco_data based on country codes
+country_data <- country_data %>%
+  inner_join(edueco_data, by = c("isocntry" = "iso2c"))
+
+# Step 4: Merge selected_data with country_data using "serialid" as the key
+merged_data <- selected_data %>%
+  inner_join(country_data, by = "serialid")
+
+
+
+
+library(dplyr)
+
+library(dplyr)
+
+merged_data <- merged_data |> rename(
+  lifesat = d70,
+  natmat = d71_1,
+  eumat = d71_2,
+  locmat = d71_3,
+  euvoice = d72_1,
+  natvoice = d72_2,
+  gender = d10,
+  community = d25,
+  ideo = d1,
+  class = d63,
+  ethnic = sd2_1,
+  skin = sd2_2,
+  relig = sd2_3,
+  roma = sd2_4,
+  sex = sd2_5,
+  disab = sd2_6,
+  other = sd2_7,
+  religion = sd3,
+  sexdiscr = qc1_4,
+  transdiscr = qc1_8,
+  interdiscr = qc1_10,
+  gdp = `NY.GDP.MKTP.CD`,
+  edu_exp_pct = `SE.XPD.TOTL.GD.ZS`,
+  preprim_exp = `PrePrimary (XSPENDP.02.FDPUB.FNCUR)`,
+  prim_exp = `Primary (XSPENDP.1.FDPUB.FNCUR)`,
+  lose_exp = `LowerSecondary (XSPENDP.2.FDPUB.FNCUR)`,
+  upse_exp = `UpperSecondary (XSPENDP.2T3.FDPUB.FNCUR)`,
+  ter_exp = `Tertiary (XSPENDP.3.FDPUB.FNCUR)`,
+  voc_exp = `VocationalTraining (XSPENDP.4.FDPUB.FNCUR)`,
+  school_div_sexual_orientation = qc17_3,
+  school_div_transgender = qc17_4,
+  school_div_intersex= qc17_5, 
+  age_edu = d8,
+  age_edu_5cat = d8r1,
+  age_edu_11cat = d8r2
+)
+
+  
+  
+write.csv(merged_data, "final_data.csv", col.names = TRUE)
+
+
+
 
 ```
