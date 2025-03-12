@@ -292,7 +292,7 @@ The model incorporates random intercepts for countries (ISO3C), with a standard 
 
 The fixed effects estimate for the intercept is -0.0592, representing the baseline log-odds of supporting transgender rights for the reference category (likely male). The coefficient for gender (0.2910) indicates that women are more likely to support transgender rights compared to men. The positive sign of the coefficient suggests that identifying as female increases the likelihood of expressing support for transgender rights.
 
-The findings demonstrate that gender plays a significant role in shaping attitudes toward transgender rights, with women showing higher levels of support than men. Additionally, there is notable variation in support across countries, indicating that national-level factors contribute to differences in attitudes toward transgender individuals. Future research could explore the impact of specific country-level policies, cultural norms, and media representation on these attitudes.
+The findings demonstrate that gender plays a significant role in shaping attitudes toward transgender rights, with women showing higher levels of support than men. Additionally, there is notable variation in support across countries, indicating that national-level factors contribute to differences in attitudes toward transgender individuals.
 
 ```{r}
 library(sjPlot)
