@@ -114,37 +114,137 @@ individual_vars <- final_data %>%
 
 
 
-individual_vars %>%
-  gather(key = "Variable", value = "Value") %>%
-  ggplot(aes(x = Value, y = ..count.. / sum(..count..), fill = ..count..)) +
-  geom_histogram(bins = 30, color = "black") +
-  scale_fill_viridis(option = "C") +
-  facet_wrap(~Variable, scales = "free_x", ncol = 3) +
-  labs(title = "Percentage Distribution of Individual-Level Variables",
-       x = "Value",
-       y = "Percentage") +
-  scale_y_continuous(labels = scales::percent_format()) +  # Convert y-axis to percentages
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-
-
-
 ```
 
 ```{r}
-# Proportion of each response category
-prop.table(table(final_data$transgender_civil_dc)) * 100
+# Step 1: Group variables into meaningful categories
+# Create a function to assign variables to groups
+categorize_variables <- function(var_name) {
+  if (var_name %in% c("gender", "age_edu_5cat", "age_edu_11cat", "skin")) {
+    return("Demographics")
+  } else if (var_name %in% c("school_div_intersex", "school_div_sexual_orientation", "school_div_transgender")) {
+    return("Diversity Measures")
+  } else if (var_name %in% c("natvoice", "euvoice")) {
+    return("Voice Representation")
+  } else if (var_name %in% c("relig", "roma", "transgender_civil_dc")) {
+    return("Identity & Rights")
+  } else {
+    return("Other Variables")
+  }
+}
 
-library(ggplot2)
+# Step 2: Prepare the data with better labeling
+improved_data <- individual_vars %>%
+  gather(key = "Variable", value = "Value") %>%
+  mutate(
+    # Create variable group for faceting
+    Variable_Group = sapply(Variable, categorize_variables),
+    # Create more readable variable names
+    Variable_Label = case_when(
+      Variable == "gender" ~ "Gender",
+      Variable == "age_edu_5cat" ~ "Age-Education (5 cat)",
+      Variable == "age_edu_11cat" ~ "Age-Education (11 cat)",
+      Variable == "skin" ~ "Skin Color",
+      Variable == "school_div_intersex" ~ "School Diversity (Intersex)",
+      Variable == "school_div_sexual_orientation" ~ "School Diversity (Sexual Orientation)",
+      Variable == "school_div_transgender" ~ "School Diversity (Transgender)",
+      Variable == "natvoice" ~ "Native Voice",
+      Variable == "euvoice" ~ "European Voice",
+      Variable == "polintr" ~ "Political Interest",
+      Variable == "relig" ~ "Religion",
+      Variable == "roma" ~ "Roma Identity",
+      Variable == "sexdiscr" ~ "Sexual Discrimination",
+      Variable == "transdiscr" ~ "Transgender Discrimination",
+      Variable == "transgender_civil_dc" ~ "Transgender Civil Rights",
+      TRUE ~ Variable
+    )
+  )
 
-ggplot(final_data, aes(x = transgender_civil_dc)) +
-  geom_bar(fill = "steelblue") +
-  labs(title = "Distribution of Support for Transgender Rights",
-       x = "Response",
-       y = "Count") +
-  theme_minimal()
+# Step 3: Create a better histogram visualization function
+create_improved_histogram <- function(data, group_name) {
+  filtered_data <- data %>% 
+    filter(Variable_Group == group_name)
+  
+  ggplot(filtered_data, aes(x = Value, fill = after_stat(count))) +
+    geom_histogram(bins = 15, color = "white", alpha = 0.9) +
+    # Use a better color palette - inferno is more readable than viridis option C
+    scale_fill_viridis(option = "D", name = "Count", direction = 1) + 
+    facet_wrap(~Variable_Label, scales = "free", ncol = 2) +
+    labs(
+      title = paste("Distribution of", group_name),
+      x = "Value",
+      y = "Frequency",
+      caption = "Values shown as frequencies rather than percentages for better readability"
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(
+      plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+      axis.title = element_text(size = 12, face = "bold"),
+      axis.text.x = element_text(angle = 30, hjust = 1, size = 10),
+      axis.text.y = element_text(size = 10),
+      strip.text = element_text(size = 12, face = "bold"),
+      strip.background = element_rect(fill = "lightgray", color = NA),
+      panel.spacing = unit(1, "lines"),
+      legend.position = "right",
+      plot.margin = margin(10, 10, 10, 10)
+    )
+}
 
+# Step 4: Create separate plots for each variable group
+demographics_plot <- create_improved_histogram(improved_data, "Demographics")
+diversity_plot <- create_improved_histogram(improved_data, "Diversity Measures")
+voice_plot <- create_improved_histogram(improved_data, "Voice Representation")
+identity_plot <- create_improved_histogram(improved_data, "Identity & Rights")
+other_plot <- create_improved_histogram(improved_data, "Other Variables")
+
+# Alternative approach: For categorical variables with few categories, use bar charts instead
+create_bar_chart <- function(data, variable_name) {
+  var_data <- individual_vars %>%
+    select(all_of(variable_name)) %>%
+    rename(Value = all_of(variable_name)) %>%
+    group_by(Value) %>%
+    summarize(Count = n()) %>%
+    mutate(
+      Percentage = Count / sum(Count) * 100,
+      Value = factor(Value)
+    )
+  
+  # Get variable label
+  var_label <- improved_data %>%
+    filter(Variable == variable_name) %>%
+    pull(Variable_Label) %>%
+    unique()
+  
+  ggplot(var_data, aes(x = Value, y = Percentage, fill = Percentage)) +
+    geom_bar(stat = "identity", width = 0.7) +
+    geom_text(aes(label = sprintf("%.1f%%", Percentage)),
+              position = position_stack(vjust = 0.5),
+              color = "black") +
+    scale_fill_viridis(option = "D") +
+    labs(
+      title = paste("Distribution of", var_label),
+      x = "Category",
+      y = "Percentage (%)"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+      axis.title = element_text(size = 12, face = "bold"),
+      axis.text.x = element_text(size = 10),
+      legend.position = "none"
+    )
+}
+
+# Example for gender (if it's categorical)
+gender_bar <- create_bar_chart(individual_vars, "gender")
+ggsave("gender_distribution.png", gender_bar, width = 8, height = 6, dpi = 300)
+
+# For a clean dashboard-style visualization combining all plots
+# You can use patchwork to arrange them
+
+list(demographics_plot, diversity_plot,voice_plot,identity_plot, gender_bar, other_plot)
+
+#Maybe tab idea gina
 ```
 
 ```{r}
@@ -206,6 +306,134 @@ plot_model(model1, type = "est", show.values = TRUE, title = "Effect of Gender o
 ```
 
 ```{r}
+
+
+country_vars <- final_data %>%
+  group_by(iso3c) %>%
+  summarise(
+    Avg_Support = mean(as.numeric(transgender_civil_dc), na.rm = TRUE),
+    GDP = mean(gdp, na.rm = TRUE),
+    Education_Expenditure = mean(edu_exp_pct, na.rm = TRUE),
+    Preprimary_Education = mean(preprim_exp, na.rm = TRUE),
+    Primary_Education = mean(prim_exp, na.rm = TRUE),
+    Lower_Secondary_Education = mean(lose_exp, na.rm = TRUE),
+    Upper_Secondary_Education = mean(upse_exp, na.rm = TRUE),
+    Tertiary_Education = mean(ter_exp, na.rm = TRUE),
+    Vocational_Education = mean(voc_exp, na.rm = TRUE)
+  )
+
+
+```
+
+```{r}
+# Load necessary libraries
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(viridis)
+library(patchwork)
+
+# Step 1: Categorize country-level variables
+categorize_country_variables <- function(var_name) {
+  if (var_name %in% c("GDP", "Education_Expenditure", "Preprimary_Education", 
+                      "Primary_Education", "Lower_Secondary_Education", 
+                      "Upper_Secondary_Education", "Tertiary_Education", 
+                      "Vocational_Education")) {
+    return("Economic & Education Indicators")
+  } else if (var_name %in% c("Avg_Support")) {
+    return("Support for Transgender Rights")
+  } else {
+    return("Other Country-Level Variables")
+  }
+}
+
+# Step 2: Summarize country-level data
+country_vars <- final_data %>%
+  group_by(iso3c) %>%
+  summarise(
+    Avg_Support = mean(as.numeric(transgender_civil_dc), na.rm = TRUE),
+    GDP = mean(gdp, na.rm = TRUE),
+    Education_Expenditure = mean(edu_exp_pct, na.rm = TRUE),
+    Preprimary_Education = mean(preprim_exp, na.rm = TRUE),
+    Primary_Education = mean(prim_exp, na.rm = TRUE),
+    Lower_Secondary_Education = mean(lose_exp, na.rm = TRUE),
+    Upper_Secondary_Education = mean(upse_exp, na.rm = TRUE),
+    Tertiary_Education = mean(ter_exp, na.rm = TRUE),
+    Vocational_Education = mean(voc_exp, na.rm = TRUE)
+  ) %>%
+  pivot_longer(cols = -iso3c, names_to = "Variable", values_to = "Value") %>%
+  mutate(
+    Variable_Group = sapply(Variable, categorize_country_variables),
+    Variable_Label = case_when(
+      Variable == "Avg_Support" ~ "Average Support for Transgender Rights",
+      Variable == "GDP" ~ "Gross Domestic Product",
+      Variable == "Education_Expenditure" ~ "Education Expenditure (%)",
+      Variable == "Preprimary_Education" ~ "Preprimary Education Expenditure",
+      Variable == "Primary_Education" ~ "Primary Education Expenditure",
+      Variable == "Lower_Secondary_Education" ~ "Lower Secondary Education Expenditure",
+      Variable == "Upper_Secondary_Education" ~ "Upper Secondary Education Expenditure",
+      Variable == "Tertiary_Education" ~ "Tertiary Education Expenditure",
+      Variable == "Vocational_Education" ~ "Vocational Education Expenditure",
+      TRUE ~ Variable
+    )
+  ) %>%
+  drop_na(Value)  # Remove NA values to prevent errors
+
+# Step 3: Function to create plots
+create_country_plot <- function(data, group_name) {
+  filtered_data <- data %>% filter(Variable_Group == group_name)
+  
+  if (nrow(filtered_data) == 0) {
+    return(NULL)  # Skip empty groups
+  }
+  
+  if (group_name == "Support for Transgender Rights") {
+    return(
+      ggplot(filtered_data, aes(x = reorder(iso3c, Value), y = Value, fill = Value)) +
+        geom_bar(stat = "identity", color = "black") +
+        scale_fill_viridis_c(option = "C") +
+        coord_flip() +
+        labs(title = "Average Support for Transgender Rights by Country",
+             x = "Country", y = "Support Level") +
+        theme_minimal()
+    )
+  } else {
+    return(
+      ggplot(filtered_data, aes(x = Value, fill = after_stat(count))) +
+        geom_histogram(bins = 15, color = "white", alpha = 0.9) +
+        scale_fill_viridis(option = "D", name = "Count", direction = 1) + 
+        facet_wrap(~Variable_Label, scales = "free", ncol = 2) +
+        labs(title = paste("Distribution of", group_name, "Across Countries"),
+             x = "Value", y = "Frequency",
+             caption = "Country-level statistics shown as distributions") +
+        theme_minimal()
+    )
+  }
+}
+
+# Step 4: Generate plots dynamically
+valid_groups <- unique(country_vars$Variable_Group)
+plots <- list()
+
+for (group in valid_groups) {
+  plot <- create_country_plot(country_vars, group)
+  if (!is.null(plot)) {
+    plots[[group]] <- plot
+    ggsave(paste0(group, "_distribution.png"), plot, width = 10, height = 8, dpi = 300)
+  }
+}
+
+# Step 5: Combine plots into a dashboard
+if (length(plots) > 1) {
+  final_country_plot <- wrap_plots(plots, ncol = 2)
+  ggsave("country_dashboard.png", final_country_plot, width = 14, height = 10, dpi = 300)
+  final_country_plot
+} else if (length(plots) == 1) {
+  print(plots[[1]])  # If only one group exists, display it
+}
+
+
+list()
 
 
 ```
