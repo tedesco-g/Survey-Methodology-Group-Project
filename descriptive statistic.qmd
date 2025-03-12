@@ -37,9 +37,6 @@ gg_miss_var(final_data) +
 
 ```{r}
 
-
-
-
 library(mice)
 
 # Ensure final_data is a data frame
@@ -106,15 +103,109 @@ religion
 ethnicity
 
 ```{r}
+library(viridis)
+
+#  only individual-level variables
+individual_vars <- final_data %>%
+  select(gender, age_edu_5cat, age_edu_11cat, polintr, natvoice, euvoice, relig, 
+         roma, skin, sexdiscr, transdiscr, school_div_transgender, 
+         school_div_sexual_orientation, school_div_intersex, transgender_civil_dc)
 
 
+
+
+individual_vars %>%
+  gather(key = "Variable", value = "Value") %>%
+  ggplot(aes(x = Value, y = ..count.. / sum(..count..), fill = ..count..)) +
+  geom_histogram(bins = 30, color = "black") +
+  scale_fill_viridis(option = "C") +
+  facet_wrap(~Variable, scales = "free_x", ncol = 3) +
+  labs(title = "Percentage Distribution of Individual-Level Variables",
+       x = "Value",
+       y = "Percentage") +
+  scale_y_continuous(labels = scales::percent_format()) +  # Convert y-axis to percentages
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+
+
+```
+
+```{r}
+# Proportion of each response category
+prop.table(table(final_data$transgender_civil_dc)) * 100
+
+library(ggplot2)
+
+ggplot(final_data, aes(x = transgender_civil_dc)) +
+  geom_bar(fill = "steelblue") +
+  labs(title = "Distribution of Support for Transgender Rights",
+       x = "Response",
+       y = "Count") +
+  theme_minimal()
+
+```
+
+```{r}
+
+summary(final_data)
+
+table(final_data$transgender_civil_dc)
+prop.table(table(final_data$transgender_civil_dc)) * 100 
+
+final_data %>%
+  group_by(iso3c) %>%
+  summarise(Support_Rate = mean(transgender_civil_dc, na.rm = TRUE) * 100) %>%
+  arrange(desc(Support_Rate))
+```
+
+```{r}
+
+library(MASS)
 library(lme4)
 
-model <- glmer(transgender_civil_dc ~ gender + age_edu_5cat + polintr + ideo + 
-                natmat + eumat + locmat + (1 | isocntry), 
-               data = final_data, 
-               family = binomial, 
-               control = glmerControl(optimizer = "bobyqa"))
+final_data$gender <- as.factor(final_data$gender)
+final_data$iso3c <- as.factor(final_data$iso3c)
+
+final_data <- final_data %>%
+  mutate(transgender_civil_dc  = case_when(
+    transgender_civil_dc  == 1 ~ 1,  # Support
+    transgender_civil_dc  == 2 ~ 0,  # Oppose
+    transgender_civil_dc == 3 ~ 0 # Don't Know (set as NA)
+  ))
+
+
+model1 <- glmer(transgender_civil_dc ~ gender + (1 | iso3c), 
+                data = final_data, 
+                family = binomial, 
+                control = glmerControl(optimizer = "bobyqa"))
+
+list(model1)
+
+
+```
+
+The ordered logistic regression model provides valuable insights into the factors influencing support for transgender rights across different countries while accounting for country-level variations. The model has an Akaike Information Criterion (AIC) of 31415.22 and a Bayesian Information Criterion (BIC) of 31439.70, which are useful for model comparison. The log-likelihood (-15704.61) and deviance (31409.22) indicate the overall fit of the model. With 25,898 residual degrees of freedom, the model effectively utilizes the dataset while maintaining a good balance between complexity and interpretability.
+
+The model incorporates random intercepts for countries (ISO3C), with a standard deviation of 0.94. This suggests that support for transgender rights varies significantly across different European countries. Some countries exhibit stronger support, while others show lower acceptance, emphasizing the importance of regional and cultural differences in shaping attitudes toward transgender rights.
+
+The fixed effects estimate for the intercept is -0.0592, representing the baseline log-odds of supporting transgender rights for the reference category (likely male). The coefficient for gender (0.2910) indicates that women are more likely to support transgender rights compared to men. The positive sign of the coefficient suggests that identifying as female increases the likelihood of expressing support for transgender rights.
+
+The findings demonstrate that gender plays a significant role in shaping attitudes toward transgender rights, with women showing higher levels of support than men. Additionally, there is notable variation in support across countries, indicating that national-level factors contribute to differences in attitudes toward transgender individuals. Future research could explore the impact of specific country-level policies, cultural norms, and media representation on these attitudes.
+
+```{r}
+library(sjPlot)
+plot_model(model1, type = "est", show.values = TRUE, title = "Effect of Gender on Support for Transgender Rights")
+
+
+
+
+
+
+```
+
+```{r}
 
 
 ```
