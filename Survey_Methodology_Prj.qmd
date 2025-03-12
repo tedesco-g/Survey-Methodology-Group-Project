@@ -3,8 +3,7 @@ title: "Survey Methodology Group Prj"
 format: html
 editor: visual
 ---
-
-:
+#Required Libraries
 
 ```{r}
 library(haven)
@@ -12,7 +11,7 @@ library(tidyverse)
 
 ```
 
-You can add options to executable code like this
+Data Cleaning
 
 ```{r}
 data <- read_dta("ZA7575.dta")
@@ -25,6 +24,321 @@ data_df <- data |> dplyr::select(serialid,isocntry, d70,d71_1,d71_2,d71_3,d72_1,
 #changing the name of columns
 data_df <- data_df |> rename(Country=isocntry,lifesat=d70,natmat=d71_1, eumat=d71_2,locmat=d71_3,euvoice=d72_1, natvoice=d72_2,age=d11,gender=d10,community=d25,ideo=d1,class=d63,eduyears=d8,ethnic=sd2_1, skin=sd2_2,relig=sd2_3, roma=sd2_4, sex=sd2_5,disab=sd2_6,other=sd2_7, none_min=sd2_8,oncontent=qc5_1,pubdef=qc5_2,campaign=qc5_3,workplace=qc5_4,fightdisc=qc7,suprights=qc15_1, suprelation=qc15_2,supmarriage=qc15_3,ch_marriage=d7r3, schsexor=qc17_3,schtrans=qc17_4,schinter=qc17_5,policy_id=qc19, policy_sex=qc20,occup=d15a,religion=sd3, sexdiscr=qc1_4,transdiscr=qc1_8, interdiscr=qc1_10, inter_usage=d62t,leadership = opls)
 
-write_csv(data_df, "data", col_names = TRUE)
+
 
 ```
+
+## Final Assignment
+
+## Libraries
+
+```{r}
+rm(list = ls())
+
+```
+
+```{r, results='hide'}
+
+```
+
+## Data
+
+```{r}
+
+```
+
+## DATA CLEANING
+
+Cleaning specific variables to determine which are the more important once for our analysis.
+
+
+```{r}
+
+```
+
+
+### Added Variable 
+
+**GDP for Each Country**
+
+Explain why GDP
+
+```{r}
+
+```
+
+**Education Expenditures**
+
+Explain why Education Expenditures
+
+```{r}
+
+```
+
+
+## EXPLAINING CROSS-COUNTRY DIFFERENCES
+
+In this section, we aim to identify factors influencing support for or opposition to transgender rights, particularly the ability to change civil documents. Our analysis will alternate between individual-level and country-level perspectives 
+
+## Descriptive Analysis
+
+### Gender
+
+
+```{r}
+
+```
+
+### Political Belief -idk if belief is the right word
+
+```{r}
+
+```
+
+
+### Religios Belief
+
+
+```{r}
+
+```
+
+
+
+### Contact with Transgender Individual
+
+```{r}
+
+```
+
+
+### Age
+
+
+```{r}
+
+```
+
+
+### Awareness
+
+
+```{r}
+
+```
+
+
+### Education
+
+
+
+```{r}
+
+
+```
+
+
+### The economic situation
+
+```{r}
+
+```
+
+### Support for LGB rights
+
+```{r}
+
+```
+
+
+### Rural vs. urban
+
+
+```{r}
+d
+```
+
+
+### Country-level economic variables (GDP per capita and unemployment)
+
+```{r}
+
+```
+
+
+# Conclusion
+
+
+## Statistical Model
+
+
+
+```{r}
+
+```
+
+
+
+INDIVIDUAL LEVEL
+
+**Gender** ## EVERYTHING FROM UNTIL OTHERWISE INDICATED CAN BE EDITED TO FIT OUR VARIABLE ##
+
+```{r}
+
+
+```
+
+**Age**
+
+
+
+```{r}
+
+```
+
+
+**Political_ideology**
+
+*In political matters people talk of "the left" and "the right". How would you place your views on this scale?*
+
+```{r}
+
+```
+
+**Religion_cat**
+
+*Do you consider yourself to be…?*
+
+```{r}
+
+
+```
+
+**Contact with transgender people (sd1_7)**
+
+*Do you have friends or acquaintances who are transgender?*
+
+```{r}
+
+
+```
+
+**Age when completing full-time education (d8)**
+
+*How old were you when you stopped full‐time education?*
+
+```{r}
+
+
+```
+
+**Personal economic situation (d60_ordinal)**
+
+*During the last twelve months, would you say you had difficulties to pay your bills at the end of the month…?*
+
+```{r}
+
+```
+
+**Sexual minority(sd2_5)**
+
+*Where you live, do you consider yourself to be part of a sexual minority?*
+
+```{r}
+
+
+```
+
+**Place of residence (type) (d25)**
+
+*Would you say you live in a...?*
+
+```{r}
+
+```
+
+**Equal rights for the LGB community (qc15_1_ordinal)**
+
+```{r}
+
+
+```
+
+**Discrimination against the transgender community (qc1_8_ordinal)**
+
+```{r}
+
+
+```
+
+COUNTRY LEVEL
+
+**Variables created earlier country level.**
+
+
+```{r}
+
+
+```
+
+**adp_general**
+
+
+
+```{r}
+
+
+```
+
+**Country_name** ## END OF VARIABLE EDITS ##
+
+
+
+```{r}
+
+
+```
+
+
+DATA FINAL COUNTRY
+
+```{r}
+
+```
+
+DATA FINAL INDIVIDUAL
+
+
+### Regression Analysis Individual Level
+
+
+```{r}
+
+```
+
+
+### Multi-level analysis
+
+
+```{r}
+
+```
+
+
+### Conclusion
+
+
+
+## PREDICTION
+
+Our goal is to develop a model capable of predicting support for transgender individuals changing civil documents. To accurately forecast our target variable, we must first establish a clear definition of the outcome we aim to predict.
+
+### Models to Follow
+
+```{r}
+
+```
+
+
+## References
+
