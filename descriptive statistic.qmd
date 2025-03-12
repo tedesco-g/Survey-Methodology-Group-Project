@@ -1,0 +1,120 @@
+---
+title: "descriptive statistics"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(readr)
+
+
+final_data <- read_csv("final_data.csv")
+
+
+```
+
+```{r}
+
+# Check structure of the dataset
+glimpse(final_data)
+#numeric variables
+summary(final_data)
+
+```
+
+```{r}
+
+library(ggplot2)
+library(naniar)
+
+# Visualize missing values
+gg_miss_var(final_data) +
+  theme_minimal() +
+  labs(title = "Missing Data Patterns")
+
+```
+
+```{r}
+
+
+
+
+library(mice)
+
+# Ensure final_data is a data frame
+final_data <- as.data.frame(final_data)
+
+# Select only variables with missing data for imputation
+impute_vars <- final_data %>% select(preprim_exp, prim_exp, lose_exp, upse_exp, voc_exp)
+
+# Generate a predictor matrix
+predictorMatrix <- make.predictorMatrix(impute_vars)
+
+
+ 
+
+imputed_data <- mice(impute_vars, method = "mean", m = 5, maxit = 10, seed = 123)
+
+
+# Replace missing values with the first imputed dataset
+final_data <- final_data %>%
+  mutate(
+    preprim_exp = complete(imputed_data, 1)$preprim_exp,
+    prim_exp = complete(imputed_data, 1)$prim_exp,
+    lose_exp = complete(imputed_data, 1)$lose_exp,
+    upse_exp = complete(imputed_data, 1)$upse_exp,
+    voc_exp = complete(imputed_data, 1)$voc_exp
+  )
+
+# Check if imputation worked correctly
+summary(final_data$voc_exp)
+summary(final_data$preprim_exp)
+summary(final_data$prim_exp)
+summary(final_data$lose_exp)
+summary(final_data$upse_exp)
+
+# Visualize imputed values
+boxplot(final_data$voc_exp, main = "Vocational Expenditure After Imputation", col = "purple")
+
+
+
+
+```
+
+```{r}
+
+
+# Visualize missing values
+gg_miss_var(final_data) +
+  theme_minimal() +
+  labs(title = "After Imputation, Missing Data Patterns")
+
+
+```
+
+**Individual level data**
+
+lifesat
+
+gender
+
+class
+
+religion
+
+ethnicity
+
+```{r}
+
+
+library(lme4)
+
+model <- glmer(transgender_civil_dc ~ gender + age_edu_5cat + polintr + ideo + 
+                natmat + eumat + locmat + (1 | isocntry), 
+               data = final_data, 
+               family = binomial, 
+               control = glmerControl(optimizer = "bobyqa"))
+
+
+```
