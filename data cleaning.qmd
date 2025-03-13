@@ -369,7 +369,23 @@ merged_data <- merged_data |> rename(
   school_div_intersex= qc17_5, 
   age_edu = d8,
   age_edu_5cat = d8r1,
-  age_edu_11cat = d8r2
+  age_edu_11cat = d8r2,
+  `no legal framework making legal gender recognition impossible` = nolger,
+`existence of legal measures` = exist_lgme,
+`existence of administrative procedures` = exist_adm,
+`name change` = name_change,
+`no age restriction, name change` = nar_name_change,
+`self-determination` = self_det,
+`non-binary recognition` = nb_recog,
+`no 'gender identity disorder' diagnosis/psychological opinion required` = psych_diag,
+`no compulsory medical intervention required` = med_interven,
+`no compulsory surgical intervention required` = surg_interven,
+`no compulsory sterilisation required` = steril_req,
+`no compulsory divorce required` = div_req,
+`no age restriction` = age_restrict,
+`legal gender recognition procedures exist for minors` = lgrp_minors,
+`depathologisation` = depath
+
 )
 
 
@@ -378,6 +394,7 @@ merged_data<- merged_data |>
   
   
 merged_data <- merged_data |> select(country, iso3c, everything())
+
 
 
 write.csv(merged_data, "final_data.csv", col.names = TRUE)
