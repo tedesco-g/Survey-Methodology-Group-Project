@@ -11,13 +11,14 @@ library(readr)
 
 final_data <- read_csv("final_data.csv")
 
+final_data<- final_data[, -1]
+
 
 ```
 
 ```{r}
 
-# Check structure of the dataset
-glimpse(final_data)
+
 #numeric variables
 summary(final_data)
 
@@ -70,11 +71,6 @@ summary(final_data$preprim_exp)
 summary(final_data$prim_exp)
 summary(final_data$lose_exp)
 summary(final_data$upse_exp)
-
-# Visualize imputed values
-boxplot(final_data$voc_exp, main = "Vocational Expenditure After Imputation", col = "purple")
-
-
 
 
 ```
