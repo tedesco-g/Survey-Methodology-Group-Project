@@ -1,7 +1,0 @@
-indicatorId,name,theme,lastDataUpdate,lastDataUpdateDescription,dataAvailability.totalRecordCount,dataAvailability.timeLine.min,dataAvailability.timeLine.max,dataAvailability.geoUnits.types,disaggregations,glossaryTerms
-XSPENDP.02.FDPUB.FNCUR,Current expenditure as a percentage of total expenditure in pre-primary public institutions (%),EDUCATION,2025-02-23,February 2025 Data Release,1637,1998,2024,NATIONAL,EduLvl:ISCED02,
-XSPENDP.1.FDPUB.FNCUR,Current expenditure as a percentage of total expenditure in primary public institutions (%),EDUCATION,2025-02-23,February 2025 Data Release,1723,1998,2023,NATIONAL,EduLvl:ISCED1,
-XSPENDP.2.FDPUB.FNCUR,Current expenditure as a percentage of total expenditure in lower secondary public institutions (%),EDUCATION,2025-02-23,February 2025 Data Release,1451,1998,2023,NATIONAL,EduLvl:ISCED2,
-XSPENDP.2T3.FDPUB.FNCUR,Current expenditure as a percentage of total expenditure in secondary public institutions (%),EDUCATION,2025-02-23,February 2025 Data Release,1736,1998,2024,NATIONAL,EduLvl:Secondary,
-XSPENDP.3.FDPUB.FNCUR,Current expenditure as a percentage of total expenditure in upper-secondary public institutions (%),EDUCATION,2025-02-23,February 2025 Data Release,1496,1998,2023,NATIONAL,EduLvl:ISCED3,
-XSPENDP.4.FDPUB.FNCUR,Current expenditure as a percentage of total expenditure in post-secondary non-tertiary public institutions (%),EDUCATION,2025-02-23,February 2025 Data Release,1602,1998,2023,NATIONAL,EduLvl:ISCED4,
