@@ -284,7 +284,7 @@ theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),  # Adjust fo
 
 ```
 
-We selected this **violin plot** because it provides a detailed view of how responses to the `qc19` question are distributed across different countries, and it highlights gender-based differences clearly. The advantage of using a violin plot is that it not only shows the distribution of responses but also reveals the spread and density of the data. By combining it with a boxplot overlay, we could also display the median and interquartile range for each country, which adds another layer of insight into how responses vary.
+We selected this **violin plot** because it provides a detailed view of how responses to the `qc19` question are distributed across different countries, and it highlights gender-based differences clearly. The advantage of using a violin plot is that it not only shows the distribution of responses but also reveals the spread and density of the data. By combining it with a boxplot overlay, we could also display the median and interquartile range for each country, which adds another layer of insight into how responses vary.
 
 In this plot, countries are ordered by the mean response score, which helps to compare countries based on their general tendency to answer the question. The red points highlighting the mean for each country provide a quick way to identify where each country stands in terms of overall response. This makes it easier to compare countries at a glance, much like the previous bar plot we used, but with more detailed distribution information.
 
@@ -369,7 +369,23 @@ merged_data <- merged_data |> rename(
   school_div_intersex= qc17_5, 
   age_edu = d8,
   age_edu_5cat = d8r1,
-  age_edu_11cat = d8r2
+  age_edu_11cat = d8r2,
+  `no legal framework making legal gender recognition impossible` = nolger,
+`existence of legal measures` = exist_lgme,
+`existence of administrative procedures` = exist_adm,
+`name change` = name_change,
+`no age restriction, name change` = nar_name_change,
+`self-determination` = self_det,
+`non-binary recognition` = nb_recog,
+`no 'gender identity disorder' diagnosis/psychological opinion required` = psych_diag,
+`no compulsory medical intervention required` = med_interven,
+`no compulsory surgical intervention required` = surg_interven,
+`no compulsory sterilisation required` = steril_req,
+`no compulsory divorce required` = div_req,
+`no age restriction` = age_restrict,
+`legal gender recognition procedures exist for minors` = lgrp_minors,
+`depathologisation` = depath
+
 )
 
 
@@ -380,7 +396,10 @@ merged_data<- merged_data |>
 merged_data <- merged_data |> select(country, iso3c, everything())
 
 
+
 write.csv(merged_data, "final_data.csv", col.names = TRUE)
 
 
 ```
+
+new
