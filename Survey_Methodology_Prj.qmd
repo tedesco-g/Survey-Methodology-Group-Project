@@ -9,7 +9,24 @@ editor: visual
 ```{r}
 library(haven)
 library(tidyverse)
-
+library(naniar)
+library(visdat)
+library(mice)
+library(GGally)
+library(corrplot)
+library(randomForest)
+library(ggcorrplot)
+library(reshape2)
+library(readr)
+library(caret)
+library(dplyr)
+library(ggplot2)
+library(viridis)
+library(MASS)
+library(lme4)
+library(sjPlot)
+library(tidyr)
+library(patchwork)
 ```
 
 Data Cleaning

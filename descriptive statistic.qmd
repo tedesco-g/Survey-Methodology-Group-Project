@@ -4,7 +4,7 @@ format: html
 editor: visual
 ---
 
-```{r}
+```{r, message=FALSE}
 library(tidyverse)
 library(readr)
 
@@ -22,6 +22,10 @@ glimpse(final_data)
 summary(final_data)
 
 ```
+
+Our final datast contains both individual-level and country-level variables.
+
+We handle missing values using the MICE package, imputing values for several expenditure variables (preprim_exp, prim_exp, lose_exp, upse_exp, voc_exp).
 
 ```{r}
 
@@ -92,6 +96,38 @@ gg_miss_var(final_data) +
 
 **Individual level data**
 
+The data includes demographic information, attitudes toward diversity, and country-level economic indicators.
+
+-   **Individual-level variables**:
+
+    -   Gender
+
+    -   Age-education categories (5-cat and 11-cat variables)
+
+    -   Political interest (polintr)
+
+    -   National and European voice representation (natvoice, euvoice)
+
+    -   Religion (relig)
+
+    -   Ethnicity-related variables (roma, skin)
+
+    -   Discrimination experiences (sexdiscr, transdiscr)
+
+    -   School diversity measures for transgender, sexual orientation, and intersex
+
+-   **Country-level variables**:
+
+    -   GDP
+
+    -   Education expenditure percentages (overall and by level)
+
+    -   ISO country codes (iso3c)
+
+-   **Target variable**:
+
+    -   transgender_civil_dc (support for transgender civil rights)
+
 lifesat
 
 gender
@@ -115,6 +151,18 @@ individual_vars <- final_data %>%
 
 
 ```
+
+We carried out a **categorization of variables** into meaningful groups:
+
+-   Demographics
+
+-   Diversity Measures
+
+-   Voice Representation
+
+-   Identity & Rights
+
+-   Economic & Education Indicators
 
 ```{r}
 # Step 1: Group variables into meaningful categories
@@ -260,6 +308,18 @@ final_data %>%
   arrange(desc(Support_Rate))
 ```
 
+We carried out **statistical modeling**:
+
+-   A mixed-effects logistic regression model (glmer) with transgender_civil_dc as the dependent variable
+
+-   Gender as a fixed effect
+
+-   Country (iso3c) as a random intercept
+
+-   The model shows that women are more likely than men to support transgender rights (coefficient = 0.2910)
+
+-   There's significant variation in support across countries (SD = 0.94)
+
 ```{r}
 
 library(MASS)
@@ -324,6 +384,12 @@ country_vars <- final_data %>%
 
 
 ```
+
+**Country-level analysis**:
+
+-   Calculation of average support for transgender rights by country
+
+-   Visualization of country-level economic and education indicators
 
 ```{r}
 # Load necessary libraries
@@ -437,3 +503,11 @@ list()
 
 
 ```
+
+Key Findings
+
+-   Gender is a significant predictor of support for transgender rights
+
+-   There's substantial variation in support across different European countries
+
+-   The analysis examines how educational expenditures might relate to attitudes toward transgender rights
