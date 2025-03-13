@@ -3,12 +3,30 @@ title: "Survey Methodology Group Prj"
 format: html
 editor: visual
 ---
+
 #Required Libraries
 
 ```{r}
 library(haven)
 library(tidyverse)
-
+library(naniar)
+library(visdat)
+library(mice)
+library(GGally)
+library(corrplot)
+library(randomForest)
+library(ggcorrplot)
+library(reshape2)
+library(readr)
+library(caret)
+library(dplyr)
+library(ggplot2)
+library(viridis)
+library(MASS)
+library(lme4)
+library(sjPlot)
+library(tidyr)
+library(patchwork)
 ```
 
 Data Cleaning
@@ -51,13 +69,11 @@ rm(list = ls())
 
 Cleaning specific variables to determine which are the more important once for our analysis.
 
-
 ```{r}
 
 ```
 
-
-### Added Variable 
+### Added Variable
 
 **GDP for Each Country**
 
@@ -75,15 +91,13 @@ Explain why Education Expenditures
 
 ```
 
-
 ## EXPLAINING CROSS-COUNTRY DIFFERENCES
 
-In this section, we aim to identify factors influencing support for or opposition to transgender rights, particularly the ability to change civil documents. Our analysis will alternate between individual-level and country-level perspectives 
+In this section, we aim to identify factors influencing support for or opposition to transgender rights, particularly the ability to change civil documents. Our analysis will alternate between individual-level and country-level perspectives
 
 ## Descriptive Analysis
 
 ### Gender
-
 
 ```{r}
 
@@ -95,15 +109,11 @@ In this section, we aim to identify factors influencing support for or oppositio
 
 ```
 
-
 ### Religios Belief
-
 
 ```{r}
 
 ```
-
-
 
 ### Contact with Transgender Individual
 
@@ -111,32 +121,24 @@ In this section, we aim to identify factors influencing support for or oppositio
 
 ```
 
-
 ### Age
-
 
 ```{r}
 
 ```
-
 
 ### Awareness
 
-
 ```{r}
 
 ```
-
 
 ### Education
 
-
-
 ```{r}
 
 
 ```
-
 
 ### The economic situation
 
@@ -150,14 +152,11 @@ In this section, we aim to identify factors influencing support for or oppositio
 
 ```
 
-
 ### Rural vs. urban
-
 
 ```{r}
 d
 ```
-
 
 ### Country-level economic variables (GDP per capita and unemployment)
 
@@ -165,23 +164,17 @@ d
 
 ```
 
-
 # Conclusion
 
-
 ## Statistical Model
-
-
 
 ```{r}
 
 ```
 
-
-
 INDIVIDUAL LEVEL
 
-**Gender** ## EVERYTHING FROM UNTIL OTHERWISE INDICATED CAN BE EDITED TO FIT OUR VARIABLE ##
+**Gender** \## EVERYTHING FROM UNTIL OTHERWISE INDICATED CAN BE EDITED TO FIT OUR VARIABLE \##
 
 ```{r}
 
@@ -190,12 +183,9 @@ INDIVIDUAL LEVEL
 
 **Age**
 
-
-
 ```{r}
 
 ```
-
 
 **Political_ideology**
 
@@ -275,7 +265,6 @@ COUNTRY LEVEL
 
 **Variables created earlier country level.**
 
-
 ```{r}
 
 
@@ -283,22 +272,17 @@ COUNTRY LEVEL
 
 **adp_general**
 
-
-
 ```{r}
 
 
 ```
 
-**Country_name** ## END OF VARIABLE EDITS ##
-
-
+**Country_name** \## END OF VARIABLE EDITS \##
 
 ```{r}
 
 
 ```
-
 
 DATA FINAL COUNTRY
 
@@ -308,26 +292,19 @@ DATA FINAL COUNTRY
 
 DATA FINAL INDIVIDUAL
 
-
 ### Regression Analysis Individual Level
-
 
 ```{r}
 
 ```
-
 
 ### Multi-level analysis
 
-
 ```{r}
 
 ```
 
-
 ### Conclusion
-
-
 
 ## PREDICTION
 
@@ -339,6 +316,4 @@ Our goal is to develop a model capable of predicting support for transgender ind
 
 ```
 
-
 ## References
-
