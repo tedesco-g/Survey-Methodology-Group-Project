@@ -8,7 +8,7 @@ editor: visual
 
 ## Loading Important Libraries
 
-```{r}
+```{r, message = FALSE}
 #important libraries
 library(haven)
 library(tidyverse)
