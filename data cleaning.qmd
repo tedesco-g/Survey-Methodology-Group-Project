@@ -4,6 +4,8 @@ format: html
 editor: visual
 ---
 
+## Data Cleaning Part
+
 ## Loading Important Libraries
 
 ```{r}
@@ -192,7 +194,7 @@ Then, we use the `reshape2` library to transform the data into a format suitab
 The distributions in each subplot look quite similar, suggesting that the imputed data preserves the original pattern well.\
 Some imputation methods may introduce subtle differences, particularly in the frequency of certain qc19 values, which can be seen in slight variations in bar heights.
 
-## Distribution 
+## Distribution
 
 ```{r}
 
