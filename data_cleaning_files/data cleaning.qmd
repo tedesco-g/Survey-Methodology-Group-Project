@@ -370,21 +370,22 @@ merged_data <- merged_data |> rename(
   age_edu = d8,
   age_edu_5cat = d8r1,
   age_edu_11cat = d8r2,
-  `no legal framework making legal gender recognition impossible` = nolger,
-`existence of legal measures` = exist_lgme,
-`existence of administrative procedures` = exist_adm,
-`name change` = name_change,
-`no age restriction, name change` = nar_name_change,
-`self-determination` = self_det,
-`non-binary recognition` = nb_recog,
-`no 'gender identity disorder' diagnosis/psychological opinion required` = psych_diag,
-`no compulsory medical intervention required` = med_interven,
-`no compulsory surgical intervention required` = surg_interven,
-`no compulsory sterilisation required` = steril_req,
-`no compulsory divorce required` = div_req,
-`no age restriction` = age_restrict,
-`legal gender recognition procedures exist for minors` = lgrp_minors,
-`depathologisation` = depath
+  nolger = `no legal framework making legal gender recognition impossible`,
+exist_lgme = `existence of legal measures`,
+exist_adm = `existence of administrative procedures`,
+name_change = `name change`,
+nar_name_change = `no age restriction, name change`,
+self_det = `self-determination`,
+nb_recog = `non-binary recognition`,
+psych_diag = `no 'gender identity disorder' diagnosis/psychological opinion required`,
+med_interven = `no compulsory medical intervention required`,
+surg_interven = `no compulsory surgical intervention required`,
+steril_req = `no compulsory sterilisation required`,
+div_req = `no compulsory divorce required`,
+age_restrict = `no age restriction`,
+lgrp_minors = `legal gender recognition procedures exist for minors`,
+depath = `depathologisation`
+
 
 )
 
