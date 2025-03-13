@@ -1,0 +1,8 @@
+code,name,description,glossaryTerms
+EduLvl,Education Level,,
+EduLvl:ISCED02,ISCED 02 - Pre-primary education,,3207
+EduLvl:ISCED1,ISCED 1 - Primary education,,2066
+EduLvl:ISCED2,ISCED 2 - Lower secondary education,,2067
+EduLvl:ISCED3,ISCED 3 - Upper secondary education,,2071
+EduLvl:ISCED4,ISCED 4 - Post-secondary non-tertiary education,,2075
+EduLvl:Secondary,ISCED 2 and 3 - Secondary education,,2182
