@@ -695,5 +695,5 @@ ggplot(legal_vars_long, aes(x = Value, fill = Variable)) +
 ```{r}
 
 ```
-
+hi
 
