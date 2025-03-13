@@ -4,7 +4,10 @@ format: html
 editor: visual
 ---
 
+## Loading Important Libraries
+
 ```{r}
+#important libraries
 library(haven)
 library(tidyverse)
 library(naniar)
@@ -16,7 +19,11 @@ library(randomForest)
 library(ggcorrplot)
 library(reshape2)
 library(readr)
+ library(caret)
+
 ```
+
+## Uploading Data
 
 ```{r}
 data <- read_dta("ZA7575.dta")
@@ -40,6 +47,8 @@ data_clean <- data_clean |>
 
 ```
 
+## Handling Missing Data
+
 ```{r}
 
 total_missing <- sum(is.na(data_clean))
@@ -59,26 +68,12 @@ high_missing <- missing_df[missing_df$Missing_Percentage > 50, ]
 print(high_missing)
 ```
 
-```{r}
+In general, there are **2,506,136 missing values** in the data set.
 
-missing_per_row <- rowSums(is.na(data_clean))
-
-head(sort(missing_per_row, decreasing = TRUE), 10)
-
-
-
-```
+Also, The output of the code shows the names of the columns (`p6mt`, `p13mt`, `p6cy`, etc.) and the corresponding counts of missing values for each. For instance, the column `p6mt` has 26,943 missing values.
 
 ```{r}
 
-missing_per_column <- sort(missing_per_column, decreasing = TRUE)
-
-print(missing_per_column[1:10])
-
-
-```
-
-```{r}
 high_missing_vars <- names(missing_per_column[missing_per_column >50])
 
 data_clean <- data_clean[, !(names(data_clean) %in% high_missing_vars)]
@@ -88,9 +83,12 @@ data_clean <- data_clean[, !(names(data_clean) %in% constant_vars)]
 
 ```
 
+First, we identified and removed columns that had more than 50% missing values. Columns with a high percentage of missing data can negatively affect the quality of analysis, so they were excluded from the data set. This was achieved by creating a list of columns where the missing data percentage exceeded 50%, and then filtering out these columns from the `data_clean` data set.
+
+Next, we removed constant columns, which are columns where every value is the same across all rows. These columns do not provide useful information for analysis because they lack variability. To identify constant columns, we checked each column for the number of unique values and filtered out those that only had one unique value. This step ensures that the data set contains only columns that offer meaningful variation and are more useful for analysis.
+
 ```{r}
 
-library(caret)
 
 numeric_data <- data_clean[, sapply(data_clean, is.numeric)]
 
@@ -103,24 +101,28 @@ numeric_data <- numeric_data[, !zero_sd_vars]
 # Compute the correlation matrix
 cor_matrix <- cor(numeric_data, use = "pairwise.complete.obs")
 
-print(cor_matrix)
 
 high_cor <- findCorrelation(cor_matrix, cutoff = 0.90) 
 
-print(high_cor)
 
 filtered_data <- numeric_data[, -high_cor]
 
-head(filtered_data)
 
 ```
 
+First, we created a subset containing only the numeric data. This was achieved by selecting the numeric columns from the `data_clean` dataset using the `sapply()` function. As a result, we created a new data set (`numeric_data`) that contained only the numeric columns. We did this because we wanted to focus on the variables that are relevant for numerical analysis and exclude any non-numeric columns that could complicate the process.
+
+Next, we identified constant columns. Constant columns are those where all the values are identical, and they do not provide any useful variation for analysis. We calculated the standard deviation of each column, and if the standard deviation was 0, it indicated that the column was constant. These columns were flagged and removed from the data set. We performed this step because constant columns do not contribute to the variability in the data and could distort the results of the analysis. Removing them ensured that only meaningful columns remained in the data set.
+
+Afterwards, we examined the correlation between the columns in the numeric data set. Correlation measures the relationship between two variables, and highly correlated columns can cause multicollinearity in modeling. We used the `cor()` function to compute the correlation matrix, with the `use = "pairwise.complete.obs"` argument ensuring that only complete pairs of observations were used, ignoring any missing values. This step was necessary to understand how the variables relate to each other and to avoid issues that arise from highly correlated features.
+
+We then identified columns with high correlation, specifically those with a correlation coefficient greater than 0.90. These columns were selected using the `findCorrelation()` function. We performed this step to remove redundant information and avoid the problem of multi collinearity, where highly correlated variables can distort the results of regression models and lead to less reliable interpretations.
+
+Finally, we removed the highly correlated columns from the data set. Since `high_cor` contained the indices of the highly correlated columns, we excluded those columns from the `numeric_data` dataset. The resulting data set, named `filtered_data`, now contains only the variables that are relevant and not highly correlated. This step was crucial to ensure that we had a data set with distinct and useful features for further analysis.
+
 ```{r}
 
- 
-library(mice)
-
-# List of different imputation methods to test
+ # List of different imputation methods to test
 method_list <- c("pmm", "rf", "cart")
 
 # Store the imputed datasets
@@ -136,6 +138,22 @@ for (method in method_list) {
 
 ```
 
+In this code, we are testing different imputation methods to fill in missing values in the data set `data_clean`. Imputation is the process of replacing missing data with substituted values, and different methods can be tested to see which one works best for the data set. The three imputation methods chosen for testing in this code are `"pmm"`, `"rf"`, and `"cart"`.
+
+**PMM**: Predictive Mean Matching, a method that uses regression models to impute missing values based on similar observed values.
+
+**RF**: Random Forest, a machine learning algorithm that can be used to predict missing values based on the relationships between other variables in the dataset.
+
+**CART**: Classification and Regression Trees, a decision tree method that can be used for both classification and regression tasks, and it is also effective in imputing missing data.
+
+After we defined the list of imputation methods, the code then loops through each of these methods one by one to apply them to our dataset. For each method, a message is printed to let us know which method is currently being used. This makes it easier for us to follow the process, especially when we are running multiple methods.
+
+Then, for each method, the imputation is performed on the `data_clean` data set. Imputation is the process of filling in the missing values with estimates based on the existing data. For each method, the code creates three different versions of the data set, each with the missing values filled in a slightly different way. These multiple datasets help to ensure that the imputed values are reliable and not just based on one estimation.
+
+To make the imputation process more accurate, the method is run three times for each data set. This means that the imputation is refined over three cycles to get better results. By repeating the process, we can be more confident that the filled-in values are close to what the actual values might have been.
+
+Finally, after performing the imputation for each method, the resulting datasets are stored in a list. This list allows us to keep track of which imputed data set came from which method. Each method’s datas et is labeled by the name of the method, so we can easily compare the results later on to see which method worked best for our data set.
+
 ```{r}
 
 data_comparison <- data.frame(
@@ -145,74 +163,36 @@ data_comparison <- data.frame(
   CART = as.numeric(complete(imputed_datasets[["cart"]])[["qc19"]])  
 )
 
-
-
-library(reshape2)
-
-# Ensure there's an ID column (e.g., "Method")
 plot_data <- melt(data_comparison, 
                   variable.name = "Method", value.name = "qc19_values")
 
-# Plot using ggplot
-ggplot(plot_data, aes(x = qc19_values, fill = Method)) +
+
+
+
+```
+
+The first part of the code creates a new dataset called `data_comparison`, which is used to compare the original data (before any imputation) with the imputed values. This dataset includes the `qc19` column from the original data and the imputed values from three different methods (PMM, RF, and CART). Each method’s imputed values are extracted from the imputed datasets we generated earlier and added to the comparison table. The purpose of this is to visually compare the original data with the different imputation methods to see how the imputed values differ.
+
+Then, we use the `reshape2` library to transform the data into a format suitable for plotting. The `melt()` function is used to convert the data into a "long format," where each row represents a value from one of the imputed datasets, along with the method used. The new column called "Method" stores the method names (PMM, RF, and CART), and the column `qc19_values` stores the values for the `qc19` column from each dataset
+
+```{r}
+# Plot 
+ ggplot(plot_data, aes(x = qc19_values, fill = Method)) +
   geom_histogram(binwidth = 1, alpha = 0.6, position = "identity") +
   facet_wrap(~Method, scales = "free_y") +  # Separate plots for each method
   labs(title = "Comparison of Imputation Methods",
        x = "qc19 Values", y = "Frequency") +
   theme_minimal()
-
-
 ```
 
 **Comparison of Imputation Methods for qc19**
-
-**(Preparing the data)\
-**The missing values in qc19 were addressed using multiple imputation techniques (mice package), including Predictive Mean Matching (PMM), Random Forest (RF), Classification and Regression Trees (CART), Logistic Regression (LogReg), and Polynomial Regression (PolyReg).
-Comparing these methods visually is effective in assessing how well each method retains the original distribution: if a method deviates significantly from the original distribution, it may indicate that it’s not well-suited for this type of data.
 
 **(Interpretation)\
 **This graph compares the distribution of qc19 values across different imputation methods (PMM, RF, CART, LogReg, PolyReg) and the original dataset.\
 The distributions in each subplot look quite similar, suggesting that the imputed data preserves the original pattern well.\
 Some imputation methods may introduce subtle differences, particularly in the frequency of certain qc19 values, which can be seen in slight variations in bar heights.
 
-```{r}
-numeric_vars <- filtered_data %>% select(where(is.numeric))
-
-cor_matrix <- cor(numeric_vars, use = "complete.obs")
-
-qc19_correlations <- sort(cor_matrix["qc19", ], decreasing = TRUE)
-
-print(qc19_correlations)
-
-
-top_correlations <- sort(qc19_correlations, decreasing = TRUE)
-
-
-top_20 <- head(top_correlations, 20)
-
-
-ggplot(data.frame(Variable = names(top_20), Correlation = top_20), aes(x = reorder(Variable, Correlation), y = Correlation)) +
-  geom_bar(stat = "identity", fill = "steelblue") +
-  coord_flip() +
-  labs(title = "High Correlation with qc19 ", x = "Variable", y = "Correlation") +
-  theme_minimal()
-
-top_vars <- c("qc20", "qc15_3", "qc15_2","qc15_1","qc17_3", "qc17_5") 
-
-for (var in top_vars) {
-  print(ggplot(data , aes_string(x = var)) +
-    geom_histogram(fill = "blue", bins = 30) +
-    labs(title = paste("Distrubition:", var), x = var, y = "Frequency") +
-    theme_minimal())
-}
-
-
-library(haven) 
-data<- data %>%
-  mutate(qc19 = as_factor(qc19))
-
-
-```
+## Distribution 
 
 ```{r}
 
@@ -225,27 +205,38 @@ qc19_country_gender_dist <- data%>%
   summarise(count = n(), .groups = 'drop')
 
 
+```
+
+```{r}
 ggplot(qc19_country_gender_dist, aes(x = qc19, y = count, fill = gender)) +
   geom_col(position = "dodge", width = 0.7) +  # Dodge to separate gender groups
-  facet_wrap(~isocntry, scales = "free_y") +  # Facet by country
+  facet_wrap(~isocntry, scales = "fixed") +  # Fix the y-axis across all countries
   scale_fill_manual(values = c("Man" = "#3C8BFA", "Woman" = "#663CFA")) +  # Gender colors
+  scale_y_continuous(limits = c(0, 400), oob = scales::squish) +  # Set y-axis range and clip outside values
   labs(title = "Distribution of qc19 Responses by Country and Gender",
        x = "Response Type", y = "Response Count", fill = "Gender") +
   theme_minimal(base_size = 10) +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1, size = 6),  
     legend.position = "bottom",
-        legend.text = element_text(size = 8),
-     legend.title = element_text(size = 9, face = "bold"),
-      legend.key.size = unit(0.4, "cm"),
+    legend.text = element_text(size = 8),
+    legend.title = element_text(size = 9, face = "bold"),
+    legend.key.size = unit(0.4, "cm"),
     panel.grid.major.x = element_blank(),
-    strip.text = element_text(size = 8, face = "bold"),  # Small facet title
-    strip.background = element_rect(fill = "gray90", color = "black") +
-      annotate("text", x = 2, y = max(qc19_country_gender_dist$count) + 20, 
-           label = "Response Type", size = 5, fontface = "bold", vjust = -1.3)  # Add "Response Type"# Facet label style
+    strip.text = element_text(size = 8, face = "bold"),
+    strip.background = element_rect(fill = "gray90", color = "black"),
+    panel.spacing = unit(1, "lines")
   )
 
 ```
+
+The graph shows the distribution of responses to the `qc19` question across different countries, split by gender. In some countries, men tend to give a higher number of "Yes" responses, while women tend to answer "No" or "Don't Know" more frequently. This suggests that gender may influence how people answer the question in different regions.
+
+In countries like Austria (AT), Great Britain (GB), and Spain (ES), responses are fairly balanced between genders. However, in countries such as Poland (PL) and Portugal (PT), one gender seems to dominate a particular response category, indicating a possible cultural or regional difference in how men and women approach the question.
+
+Overall, Western European countries show more "Yes" responses, while Eastern European countries show higher proportions of "No" or "Don't Know" responses. These differences might be influenced by societal or cultural factors.
+
+In conclusion, this graph highlights the role of both gender and cultural context in shaping responses to the same question across different countries. Understanding these differences could offer insights into the social and cultural dynamics at play.
 
 ```{r}
 ggplot(qc19_country_gender_dist, aes(x = gender, y = count, fill = gender)) +
@@ -262,13 +253,11 @@ ggplot(qc19_country_gender_dist, aes(x = gender, y = count, fill = gender)) +
 
 **Distribution of qc19 Responses by Gender**
 
-**(Preparing the data)**
-The qc19 variable was converted into a factor (as_factor(qc19)) to ensure categorical treatment.\
+**(Preparing the data)** The qc19 variable was converted into a factor (as_factor(qc19)) to ensure categorical treatment.\
 Gender was also converted into a factor (as_factor(d10)), making it easier to group responses by gender.\
 The decision to visualize gender-based distribution ensures that any systematic differences between male and female responses are identified.
 
-**(Interpretation)**
-This boxplot illustrates the response count distribution for qc19, separated by gender. We can see that women tend to have slightly higher counts across response categories (Yes, No, DK), as indicated by the median and interquartile range.\
+**(Interpretation)** This boxplot illustrates the response count distribution for qc19, separated by gender. We can see that women tend to have slightly higher counts across response categories (Yes, No, DK), as indicated by the median and interquartile range.\
 The “DK” category shows a lower response count overall, with some outliers.\
 The spread of responses is wider for Yes and No, indicating more variation in responses among men and women.
 
@@ -290,16 +279,28 @@ theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),  # Adjust fo
 
 ```
 
+We selected this **violin plot** because it provides a detailed view of how responses to the `qc19` question are distributed across different countries, and it highlights gender-based differences clearly. The advantage of using a violin plot is that it not only shows the distribution of responses but also reveals the spread and density of the data. By combining it with a boxplot overlay, we could also display the median and interquartile range for each country, which adds another layer of insight into how responses vary.
+
+In this plot, countries are ordered by the mean response score, which helps to compare countries based on their general tendency to answer the question. The red points highlighting the mean for each country provide a quick way to identify where each country stands in terms of overall response. This makes it easier to compare countries at a glance, much like the previous bar plot we used, but with more detailed distribution information.
+
+While the previous bar plot helped us compare the responses between men and women across countries, this violin plot allows us to examine the distribution in more detail. In the bar plot, we could see that some countries had a higher count of "Yes" or "No" responses, but the violin plot provides a deeper understanding of how those responses are spread. For example, in some countries, the responses are tightly grouped around a specific value (like "Yes"), while in others, the responses are more spread out across "Yes", "No", and "DK".
+
+From the graph, it’s clear that there are significant differences in the response distributions across countries. In some countries, the "Yes" response is much more common, while in others, "No" responses dominate. For example, in some Western European countries (such as the UK and Spain), the "Yes" response is more frequent, while in Eastern European countries (like Poland and Romania), "No" responses are higher. This suggests that cultural and societal factors in each country might influence how people answer such questions.
+
+Another notable observation is the "Don't Know" (DK) category. In some countries, especially in Northern Europe (like Sweden), there’s a higher frequency of "Don't Know" responses. This could indicate that people in these countries are more uncertain or hesitant to provide a definitive answer.
+
+Additionally, some countries have wider violin plots, which indicates that responses in those countries are more spread out, meaning people gave more varied answers. This could reflect a society with diverse opinions and viewpoints.
+
+In conclusion, the differences across countries shed light on how cultural factors and societal norms influence responses to questions like this. Gender differences in responses also stand out in certain countries, suggesting that gender plays a significant role in how people answer, influenced by cultural and social contexts.
+
 ```{r}
 
-library(dplyr)
-
-# Step 1: Select relevant columns from filtered_data
+# Step 1:  relevant columns from filtered_data
 selected_data <- filtered_data |>
   select(c(
     "serialid", "d70", "d71_1", "d71_2", "d71_3", "d72_1", "d72_2", "polintr", "d10", "d25", "d1", "d63", "sd2_1", "sd2_2", "sd2_3", "sd2_4", "sd2_5", "sd2_6", "sd2_7", "sd3", "qc1_4", "qc1_8", "qc1_10", "d8r1", "d8r2", "d8", "qc19"))
 
-# Step 2: Select relevant columns from `data`
+# Step 2: relevant columns from `data`
 country_data <- data |>
   select("serialid", "isocntry", "qc17_4", "qc17_3", "qc17_5")
 
