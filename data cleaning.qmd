@@ -33,6 +33,9 @@ data <- read_dta("ZA7575.dta")
 
 edueco_data <- read_csv("UNESCO Edu Country Data 2019/edueco_data.csv")
 
+trans_health_data <-read.csv("trans_health_data.csv")
+
+ilga_data <-  read_csv("ilga_data.csv")
 
 ```
 
@@ -306,6 +309,18 @@ selected_data <- filtered_data |>
 country_data <- data |>
   select("serialid", "isocntry", "qc17_4", "qc17_3", "qc17_5")
 
+
+colnames(trans_health_data) <- tolower(colnames(trans_health_data))
+colnames(ilga_data) <- tolower(colnames(ilga_data))
+
+
+edueco_data <- edueco_data |> 
+  inner_join(trans_health_data, by= "country")
+
+edueco_data <- edueco_data |> 
+  inner_join(ilga_data, by= "country")
+
+
 # Step 3: Merge country_data with edueco_data based on country codes
 country_data <- country_data %>%
   inner_join(edueco_data, by = c("isocntry" = "iso2c"))
@@ -313,6 +328,7 @@ country_data <- country_data %>%
 # Step 4: Merge selected_data with country_data using "serialid" as the key
 merged_data <- selected_data %>%
   inner_join(country_data, by = "serialid")
+
 
 
 
@@ -356,8 +372,14 @@ merged_data <- merged_data |> rename(
   age_edu_11cat = d8r2
 )
 
+
+merged_data<- merged_data |> 
+  select(-c(x, isocntry, ...1))
   
   
+merged_data <- merged_data |> select(country, iso3c, everything())
+
+
 write.csv(merged_data, "final_data.csv", col.names = TRUE)
 
 
