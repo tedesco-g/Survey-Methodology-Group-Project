@@ -451,7 +451,6 @@ create_improved_histogram <- function(data, group_name) {
       strip.background = element_rect(fill = "lightgray", color = NA),
       panel.spacing = unit(1, "lines"),
       legend.position = "right",
-      #plot.margin(margin(10,10,10,10))
     )
 }
 
@@ -491,7 +490,6 @@ create_bar_chart <- function(data, variable_name) {
   ggplot(var_data, aes(x = Value, y = Percentage, fill = Percentage)) +
     geom_bar(stat = "identity", width = 0.7) +
     geom_text(aes(label = sprintf("%.1f%%", Percentage)), position = position_stack(vjust = 0.5), color = "black") +
-    scale_fill_viridis(option = "D") +
     labs(title = paste("Distribution of", var_label), x = "Category", y = "Percentage (%)") +
     theme_minimal()
 }
@@ -637,7 +635,6 @@ religion_counts <- religion_counts %>%
 # Create bar plot
 ggplot(religion_counts, aes(x = reorder(religion1, Count), y = Percentage, fill = religion1)) +
   geom_bar(stat = "identity", width = 0.7) +
-  scale_fill_viridis_d() +
   coord_flip()+
   labs(
     title = "Distribution of Religions",
@@ -676,6 +673,77 @@ cat("Average Support in Eastern Europe: ", mean_east, "\n")
 ```
 
 ```{r}
+
+education_levels <- final_data %>%
+  mutate(ISCED_Level = case_when(
+    age_edu == 00 ~ "Still Studying",  # Separate category
+    age_edu == 01 ~ "No Formal Education",  # No formal schooling
+    age_edu == 98 | age_edu == 99 ~ "Refused / Don't Know",  # Separate category
+    age_edu < 5  ~ "Pre-primary",
+    age_edu >= 5 & age_edu <= 10  ~ "Primary",
+    age_edu >= 11 & age_edu <= 14  ~ "Lower Secondary",
+    age_edu >= 15 & age_edu <= 18  ~ "Upper Secondary",
+    age_edu >= 16 & age_edu <= 19  ~ "Vocational",
+    age_edu >= 19  ~ "Tertiary",
+    TRUE ~ NA_character_
+  ))
+
+
+
+
+
+
+education_summary <- education_levels %>%
+  group_by(country, ISCED_Level) %>%
+  summarise(Count = n(), .groups = "drop") %>%
+  arrange(country, desc(Count))
+
+
+
+
+
+education_spending_summary <- education_summary %>%
+  left_join(final_data %>%
+              group_by(country) %>%
+              summarise(
+                Primary_Spending = mean(prim_exp, na.rm = TRUE),
+                Lower_Secondary_Spending = mean(lose_exp, na.rm = TRUE),
+                Upper_Secondary_Spending = mean(upse_exp, na.rm = TRUE),
+                Vocational_Spending = mean(voc_exp, na.rm = TRUE),
+                Tertiary_Spending = mean(ter_exp, na.rm = TRUE)
+              ), by = "country")  
+
+
+hchart(education_summary, "column", 
+       hcaes(x = country, y = Count, group = ISCED_Level)) %>%
+  hc_chart(
+    type = "column",
+    backgroundColor = list(
+      linearGradient = list(x1 = 0, y1 = 0, x2 = 0, y2 = 1),
+      stops = list(
+        list(0, 'white'),    
+        list(1, 'white')     
+      )
+    )
+  ) %>%
+  hc_plotOptions(column = list(stacking = "normal")) %>%  # Enable stacking
+  hc_title(text = "Highest Education Level Reached Per Country (Stacked)", 
+           style = list(color = "black", fontSize = "20px")) %>%
+  hc_xAxis(title = list(text = "Country", style = list(color = "black")), 
+           labels = list(style = list(color = "black"), rotation = -45)) %>%
+  hc_yAxis(title = list(text = "Number of Respondents", style = list(color = "black")), 
+           labels = list(style = list(color = "black"))) %>%
+  hc_colors(c("#1E90FF", "#FFD700", "#FF4500", "#8B0000", "#00FA9A", "#8A2BE2")) %>%  # Medium Purple
+  hc_tooltip(useHTML = TRUE, 
+             pointFormat = "<b>{point.country}</b><br>
+                           Education Level: {point.ISCED_Level}<br>
+                           Respondents: {point.y}")
+
+
+
+```
+
+```{r}
 final_data$region <- ifelse(final_data$iso3c %in% western_europe, "Western Europe", 
                             ifelse(final_data$iso3c %in% eastern_europe, "Eastern Europe", NA))
 
@@ -693,7 +761,7 @@ ggplot(region_support, aes(x = region, y = support_percentage, fill = region)) +
   labs(title = "Support for Transgender Rights by Region", 
        x = "Region", 
        y = "Support Percentage (%)") +
-  scale_fill_manual(values = c("blue", "red")) +
+  scale_fill_manual(values = c("#3C8BFA", "#663CFA")) +
   theme_minimal()
 
 ```
@@ -779,7 +847,7 @@ We wanted to visualize how responses to question 19 are distributed across diffe
 data$isocntry <- reorder(data$isocntry, as.numeric(data$qc19), mean)  # Order by mean qc19 response
 
 ggplot(data, aes(x = isocntry, y = as.numeric(qc19))) +
-  geom_violin(width = 0.9, fill = "lightblue", color = "black") +  # Make violins wider
+  geom_violin(width = 0.9, fill = "#3C8BFA", color = "black") +  # Make violins wider
   geom_boxplot(width = 0.2, outlier.shape = NA) +  # Add boxplot overlay
   stat_summary(fun = mean, geom = "point", color = "red", size = 2) +  # Highlight means
   scale_y_continuous(breaks = c(1, 2, 3), labels = c("Yes", "No", "DK")) +
@@ -822,109 +890,6 @@ country_vars <- final_data %>%
     Vocational_Education = mean(voc_exp, na.rm = TRUE)
   )
 
-```
-
-```{r}
-# Step 1: Categorize country-level variables
-categorize_country_variables <- function(var_name) {
-  if (var_name %in% c("GDP", "Education_Expenditure", "Preprimary_Education", 
-                      "Primary_Education", "Lower_Secondary_Education", 
-                      "Upper_Secondary_Education", "Tertiary_Education", 
-                      "Vocational_Education")) {
-    return("Economic & Education Indicators")
-  } else if (var_name %in% c("Avg_Support")) {
-    return("Support for Transgender Rights")
-  } else {
-    return("Other Country-Level Variables")
-  }
-}
-
-# Step 2: Summarize country-level data
-country_vars <- final_data %>%
-  group_by(iso3c) %>%
-  summarise(
-    Avg_Support = mean(as.numeric(transgender_civil_dc), na.rm = TRUE),
-    GDP = mean(gdp, na.rm = TRUE),
-    Education_Expenditure = mean(edu_exp_pct, na.rm = TRUE),
-    Preprimary_Education = mean(preprim_exp, na.rm = TRUE),
-    Primary_Education = mean(prim_exp, na.rm = TRUE),
-    Lower_Secondary_Education = mean(lose_exp, na.rm = TRUE),
-    Upper_Secondary_Education = mean(upse_exp, na.rm = TRUE),
-    Tertiary_Education = mean(ter_exp, na.rm = TRUE),
-    Vocational_Education = mean(voc_exp, na.rm = TRUE)
-  ) %>%
-  pivot_longer(cols = -iso3c, names_to = "Variable", values_to = "Value") %>%
-  mutate(
-    Variable_Group = sapply(Variable, categorize_country_variables),
-    Variable_Label = case_when(
-      Variable == "Avg_Support" ~ "Average Support for Transgender Rights",
-      Variable == "GDP" ~ "Gross Domestic Product",
-      Variable == "Education_Expenditure" ~ "Education Expenditure (%)",
-      Variable == "Preprimary_Education" ~ "Preprimary Education Expenditure",
-      Variable == "Primary_Education" ~ "Primary Education Expenditure",
-      Variable == "Lower_Secondary_Education" ~ "Lower Secondary Education Expenditure",
-      Variable == "Upper_Secondary_Education" ~ "Upper Secondary Education Expenditure",
-      Variable == "Tertiary_Education" ~ "Tertiary Education Expenditure",
-      Variable == "Vocational_Education" ~ "Vocational Education Expenditure",
-      TRUE ~ Variable
-    )
-  ) %>%
-  drop_na(Value)  # Remove NA values to prevent errors
-
-# Step 3: Function to create plots
-create_country_plot <- function(data, group_name) {
-  filtered_data <- data %>% filter(Variable_Group == group_name)
-  
-  if (nrow(filtered_data) == 0) {
-    return(NULL)  # Skip empty groups
-  }
-  
-  if (group_name == "Support for Transgender Rights") {
-    return(
-      ggplot(filtered_data, aes(x = reorder(iso3c, Value), y = Value, fill = Value)) +
-        geom_bar(stat = "identity", color = "black") +
-        scale_fill_viridis_c(option = "C") +
-        coord_flip() +
-        labs(title = "Average Support for Transgender Rights by Country",
-             x = "Country", y = "Support Level") +
-        theme_minimal()
-    )
-  } else {
-    return(
-      ggplot(filtered_data, aes(x = Value, fill = after_stat(count))) +
-        geom_histogram(bins = 15, color = "white", alpha = 0.9) +
-        scale_fill_viridis(option = "D", name = "Count", direction = 1) + 
-        facet_wrap(~Variable_Label, scales = "free", ncol = 2) +
-        labs(title = paste("Distribution of", group_name, "Across Countries"),
-             x = "Value", y = "Frequency",
-             caption = "Country-level statistics shown as distributions") +
-        theme_minimal()
-    )
-  }
-}
-
-# Step 4: Generate plots dynamically
-valid_groups <- unique(country_vars$Variable_Group)
-plots <- list()
-
-for (group in valid_groups) {
-  plot <- create_country_plot(country_vars, group)
-  if (!is.null(plot)) {
-    plots[[group]] <- plot
-    ggsave(paste0(group, "_distribution.png"), plot, width = 10, height = 8, dpi = 300)
-  }
-}
-
-# Step 5: Combine plots into a dashboard
-if (length(plots) > 1) {
-  final_country_plot <- wrap_plots(plots, ncol = 2)
-  ggsave("country_dashboard.png", final_country_plot, width = 14, height = 10, dpi = 300)
-  final_country_plot
-} else if (length(plots) == 1) {
-  print(plots[[1]])  # If only one group exists, display it
-}
-
-list()
 ```
 
 ```{r}
@@ -1017,25 +982,25 @@ hchart(data_2019, "bubble", hcaes(x = GDP_trillions, y = Spending_Billions,
     backgroundColor = list(
       linearGradient = list(x1 = 0, y1 = 0, x2 = 0, y2 = 1),
       stops = list(
-        list(0, '#1E1E3F'),    # Dark blue at the top
-        list(1, '#0A0A15')     # Near black at the bottom
+        list(0, 'white'),    # Dark blue at the top
+        list(1, 'white')     # Near black at the bottom
       )
     )
   ) %>%
   hc_title(text = "Education Spending Patterns in Europe (2019)", 
-           style = list(color = "white", fontSize = "20px")) %>%
+           style = list(color = "black", fontSize = "20px")) %>%
   hc_subtitle(text = "Comparing GDP and Total Education Spending", 
-              style = list(color = "white", fontSize = "14px")) %>%
-  hc_xAxis(title = list(text = "GDP (Trillions USD)", style = list(color = "white")),
-           labels = list(style = list(color = "white")),
+              style = list(color = "black", fontSize = "14px")) %>%
+  hc_xAxis(title = list(text = "GDP (Trillions USD)", style = list(color = "black")),
+           labels = list(style = list(color = "black")),
            gridLineColor = "#444444") %>%
   hc_yAxis(title = list(text = "Total Education Spending (Billions USD)", 
-                        style = list(color = "white")),
-           labels = list(style = list(color = "white")),
+                        style = list(color = "black")),
+           labels = list(style = list(color = "black")),
            gridLineColor = "#444444",
            min = 0) %>%  # Set y-axis to start at 0
   hc_legend(layout = "horizontal", align = "right", verticalAlign = "bottom",
-            itemStyle = list(color = "white")) %>%
+            itemStyle = list(color = "black")) %>%
   # Apply Colors Using hc_colors() 
   hc_colors(spending_colors) %>%
   hc_tooltip(useHTML = TRUE, 
