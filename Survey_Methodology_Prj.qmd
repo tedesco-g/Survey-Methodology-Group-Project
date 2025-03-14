@@ -39,16 +39,14 @@ library(patchwork)
 
 ## Data uploading
 
-```{r}
-# data <- read_dta("ZA7575.dta")
-
+```{r, message = FALSE}
 data <- read_dta("data_cleaning_files/ZA7575.dta")
 
-edueco_data <- read_csv("UNESCO Edu Country Data 2019/edueco_data.csv")
+edueco_data <- read_csv("data_cleaning_files/UNESCO Edu Country Data 2019/edueco_data.csv")
 
-trans_health_data <-read.csv("trans_health_data.csv")
+trans_health_data <-read.csv("data_cleaning_files/trans_health_data.csv")
 
-ilga_data <-  read_csv("ilga_data.csv")
+ilga_data <-  read_csv("data_cleaning_files/ilga_data.csv")
 ```
 
 ## DATA CLEANING
