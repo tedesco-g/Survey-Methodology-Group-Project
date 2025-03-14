@@ -167,7 +167,7 @@ To make the imputation process more accurate, the method is run three times for 
 
 Finally, after performing the imputation for each method, the resulting datasets are stored in a list. This list allows us to keep track of which imputed data set came from which method. Each method’s datas et is labeled by the name of the method, so we can easily compare the results later on to see which method worked best for our data set.
 
-### title? try
+### title?
 
 ```{r}
 data_comparison <- data.frame(
