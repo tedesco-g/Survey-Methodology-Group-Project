@@ -1,6 +1,6 @@
 ---
 title: "Survey Methodology Group Prj"
-authors: "Ekin, Gina, and Aurora"
+author: "Ekin, Gina, and Aurora"
 format: html
 editor: visual
 toc: true
