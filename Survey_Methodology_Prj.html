@@ -115,10 +115,75 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 </head>
 
-<body class="fullcontent">
+<body>
 
-<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
-
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article toc-left">
+<div id="quarto-sidebar-toc-left" class="sidebar toc-left">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#final-assignment" id="toc-final-assignment" class="nav-link active" data-scroll-target="#final-assignment">Final Assignment</a>
+  <ul>
+  <li><a href="#libraries" id="toc-libraries" class="nav-link" data-scroll-target="#libraries">Libraries</a></li>
+  <li><a href="#data-uploading" id="toc-data-uploading" class="nav-link" data-scroll-target="#data-uploading">Data uploading</a></li>
+  <li><a href="#data-cleaning" id="toc-data-cleaning" class="nav-link" data-scroll-target="#data-cleaning">Data Cleaning</a>
+  <ul class="collapse">
+  <li><a href="#handling-missing-data" id="toc-handling-missing-data" class="nav-link" data-scroll-target="#handling-missing-data">Handling missing data</a></li>
+  <li><a href="#formatting-and-more" id="toc-formatting-and-more" class="nav-link" data-scroll-target="#formatting-and-more">Formatting and more…</a></li>
+  <li><a href="#imputation" id="toc-imputation" class="nav-link" data-scroll-target="#imputation">Imputation</a></li>
+  </ul></li>
+  <li><a href="#merging-all-datasets" id="toc-merging-all-datasets" class="nav-link" data-scroll-target="#merging-all-datasets">Merging all datasets</a></li>
+  <li><a href="#descriptive-analysis" id="toc-descriptive-analysis" class="nav-link" data-scroll-target="#descriptive-analysis">Descriptive Analysis</a>
+  <ul class="collapse">
+  <li><a href="#missing-data-imputation" id="toc-missing-data-imputation" class="nav-link" data-scroll-target="#missing-data-imputation">Missing data imputation</a></li>
+  <li><a href="#descriptive-statistic" id="toc-descriptive-statistic" class="nav-link" data-scroll-target="#descriptive-statistic"><strong>Descriptive Statistic</strong></a></li>
+  <li><a href="#individual-level-data" id="toc-individual-level-data" class="nav-link" data-scroll-target="#individual-level-data"><strong>(1) Individual-Level Data</strong></a>
+  <ul class="collapse">
+  <li><a href="#demographics-age-education-distribution-analysis" id="toc-demographics-age-education-distribution-analysis" class="nav-link" data-scroll-target="#demographics-age-education-distribution-analysis">Demographics: Age-Education Distribution Analysis</a></li>
+  <li><a href="#school-diversity-attitudes" id="toc-school-diversity-attitudes" class="nav-link" data-scroll-target="#school-diversity-attitudes">School Diversity Attitudes</a></li>
+  <li><a href="#voice-representation" id="toc-voice-representation" class="nav-link" data-scroll-target="#voice-representation">Voice Representation</a></li>
+  <li><a href="#identity" id="toc-identity" class="nav-link" data-scroll-target="#identity">Identity</a></li>
+  <li><a href="#gender" id="toc-gender" class="nav-link" data-scroll-target="#gender">Gender</a></li>
+  <li><a href="#other-variables" id="toc-other-variables" class="nav-link" data-scroll-target="#other-variables">Other variables</a></li>
+  <li><a href="#ginas-graph" id="toc-ginas-graph" class="nav-link" data-scroll-target="#ginas-graph">gina’s graph</a></li>
+  <li><a href="#distribution-of-responses-to-question-19" id="toc-distribution-of-responses-to-question-19" class="nav-link" data-scroll-target="#distribution-of-responses-to-question-19">Distribution of responses to Question 19…</a></li>
+  </ul></li>
+  <li><a href="#country-level-data" id="toc-country-level-data" class="nav-link" data-scroll-target="#country-level-data">(2) Country-Level Data</a>
+  <ul class="collapse">
+  <li><a href="#economic-summary" id="toc-economic-summary" class="nav-link" data-scroll-target="#economic-summary">Economic Summary</a></li>
+  <li><a href="#gdp-vs.-education-expenditure" id="toc-gdp-vs.-education-expenditure" class="nav-link" data-scroll-target="#gdp-vs.-education-expenditure">GDP vs.&nbsp;Education Expenditure</a></li>
+  <li><a href="#health-variables" id="toc-health-variables" class="nav-link" data-scroll-target="#health-variables">Health Variables</a></li>
+  <li><a href="#legal-variables" id="toc-legal-variables" class="nav-link" data-scroll-target="#legal-variables">Legal Variables</a></li>
+  </ul></li>
+  <li><a href="#multicolinearity" id="toc-multicolinearity" class="nav-link" data-scroll-target="#multicolinearity">Multicolinearity</a>
+  <ul class="collapse">
+  <li><a href="#model-1" id="toc-model-1" class="nav-link" data-scroll-target="#model-1">Model 1</a></li>
+  <li><a href="#model-2" id="toc-model-2" class="nav-link" data-scroll-target="#model-2">Model 2</a></li>
+  <li><a href="#model-cross-validation" id="toc-model-cross-validation" class="nav-link" data-scroll-target="#model-cross-validation">Model Cross-Validation</a></li>
+  <li><a href="#model-3---adding-country-level" id="toc-model-3---adding-country-level" class="nav-link" data-scroll-target="#model-3---adding-country-level">Model 3 - Adding Country Level</a></li>
+  <li><a href="#model-4" id="toc-model-4" class="nav-link" data-scroll-target="#model-4">Model 4</a></li>
+  <li><a href="#correlation-analysis" id="toc-correlation-analysis" class="nav-link" data-scroll-target="#correlation-analysis">Correlation Analysis</a></li>
+  </ul></li>
+  <li><a href="#final-data" id="toc-final-data" class="nav-link" data-scroll-target="#final-data">Final data</a></li>
+  </ul></li>
+  <li><a href="#statistical-model" id="toc-statistical-model" class="nav-link" data-scroll-target="#statistical-model">Statistical Model</a>
+  <ul class="collapse">
+  <li><a href="#regression-analysis-individual-level" id="toc-regression-analysis-individual-level" class="nav-link" data-scroll-target="#regression-analysis-individual-level">Regression Analysis Individual Level</a></li>
+  <li><a href="#multi-level-analysis" id="toc-multi-level-analysis" class="nav-link" data-scroll-target="#multi-level-analysis">Multi-level analysis</a></li>
+  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion">Conclusion</a></li>
+  </ul></li>
+  <li><a href="#prediction" id="toc-prediction" class="nav-link" data-scroll-target="#prediction">PREDICTION</a>
+  <ul class="collapse">
+  <li><a href="#models-to-follow" id="toc-models-to-follow" class="nav-link" data-scroll-target="#models-to-follow">Models to Follow</a></li>
+  </ul></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
+  </ul></li>
+  </ul>
+</nav>
+</div>
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+</div>
 <main class="content" id="quarto-document-content">
 
 <header id="title-block-header" class="quarto-title-block default">
@@ -130,6 +195,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <div class="quarto-title-meta">
 
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ekin, Gina, and Aurora </p>
+          </div>
+  </div>
     
   
     

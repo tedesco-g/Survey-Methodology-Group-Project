@@ -1,7 +1,12 @@
 ---
 title: "Survey Methodology Group Prj"
+authors: "Ekin, Gina, and Aurora"
 format: html
 editor: visual
+toc: true
+toc-depth: 4
+toc-location: left
+toc-float: true
 ---
 
 # Final Assignment
