@@ -40,7 +40,9 @@ library(patchwork)
 ## Data uploading
 
 ```{r}
-data <- read_dta("ZA7575.dta")
+# data <- read_dta("ZA7575.dta")
+
+data <- read_dta("data_cleaning_files/ZA7575.dta")
 
 edueco_data <- read_csv("UNESCO Edu Country Data 2019/edueco_data.csv")
 
@@ -51,7 +53,7 @@ ilga_data <-  read_csv("ilga_data.csv")
 
 ## DATA CLEANING
 
-Cleaning specific variables to determine which are the more important once for our analysis.
+Cleaning specific variables to determine which are the more important ones for our analysis.
 
 ```{r}
 data_clean<- data %>%
