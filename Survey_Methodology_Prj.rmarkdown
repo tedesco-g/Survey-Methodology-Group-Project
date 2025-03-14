@@ -1,0 +1,1703 @@
+---
+title: "Survey Methodology Group Prj"
+author: "Ekin, Gina, and Aurora"
+format: html
+editor: visual
+toc: true
+toc-depth: 4
+toc-location: left
+toc-float: true
+---
+
+
+
+# Final Assignment
+
+## Libraries
+
+
+
+```{r, message = FALSE}
+rm(list = ls())
+
+library(haven)
+library(tidyverse)
+library(naniar)
+library(visdat)
+library(mice)
+library(GGally)
+library(corrplot)
+library(randomForest)
+library(ggcorrplot)
+library(reshape2)
+library(readr)
+library(caret)
+library(dplyr)
+library(ggplot2)
+library(viridis)
+library(MASS)
+library(lme4)
+library(sjPlot)
+library(tidyr)
+library(patchwork)
+library(car)
+library(nnet)
+library(highcharter)
+library(scales)
+```
+
+
+
+## Data uploading
+
+
+
+```{r, message = FALSE}
+data <- read_dta("data_cleaning_files/ZA7575.dta")
+
+edueco_data <- read_csv("data_cleaning_files/UNESCO Edu Country Data 2019/edueco_data.csv")
+
+trans_health_data <-read.csv("data_cleaning_files/trans_health_data.csv")
+
+ilga_data <-  read_csv("data_cleaning_files/ilga_data.csv")
+```
+
+
+
+## Data Cleaning
+
+Cleaning specific variables to determine which are the more important ones for our analysis.
+
+
+
+```{r}
+data_clean<- data %>%
+  mutate(across(where(is.labelled), as.numeric))
+
+data_clean <- data_clean |> 
+ dplyr::select(where(is.numeric))|>
+  dplyr::select(-c(edition,studyno1, studyno2,survey, caseid, uniqid))
+```
+
+
+
+### Handling missing data
+
+
+
+```{r}
+
+total_missing <- sum(is.na(data_clean))
+cat("Total Missing:", total_missing, "\n")
+
+missing_per_column <- colSums(is.na(data_clean))
+
+missing_df <- data.frame(Variable = names(missing_per_column), 
+                         Missing_Count = missing_per_column, 
+                         Missing_Percentage = (missing_per_column / nrow(data)) * 100)
+
+missing_df <- missing_df[order(-missing_df$Missing_Percentage), ]
+
+
+high_missing <- missing_df[missing_df$Missing_Percentage > 50, ]
+
+```
+
+
+
+In general, there are **2,506,136 missing values** in the data set. The output of the code shows the names of the columns (`p6mt`, `p13mt`, `p6cy`, etc.) and the corresponding counts of missing values for each.
+
+
+
+```{r}
+high_missing_vars <- names(missing_per_column[missing_per_column >50])
+
+data_clean <- data_clean[, !(names(data_clean) %in% high_missing_vars)]
+
+constant_vars <- names(Filter(function(x) length(unique(x)) == 1, data_clean))
+data_clean <- data_clean[, !(names(data_clean) %in% constant_vars)]
+
+```
+
+
+
+First, we identified and removed columns that had more than 50% missing values, as they can negatively affect the quality of analysis. This was achieved by creating a list of columns where the missing data percentage exceeded 50%, and then filtering out these columns from the `data_clean` data set.
+
+Then, we removed constant columns, which do not provide useful information for the analysis, since they lack variability. To identify constant columns, we checked each column for the number of unique values and filtered out those that only had one unique value. This step ensures that the data set contains only columns that offer meaningful variation and are more useful for analysis.
+
+### Formatting and more…
+
+
+
+```{r}
+numeric_data <- data_clean[, sapply(data_clean, is.numeric)]
+
+# Identify constant columns (standard deviation = 0)
+zero_sd_vars <- sapply(numeric_data, function(x) sd(x, na.rm = TRUE) == 0)
+
+# Remove constant columns
+numeric_data <- numeric_data[, !zero_sd_vars]
+
+# Compute the correlation matrix
+cor_matrix <- cor(numeric_data, use = "pairwise.complete.obs")
+
+high_cor <- findCorrelation(cor_matrix, cutoff = 0.90) 
+
+filtered_data <- numeric_data[, -high_cor]
+
+```
+
+
+
+We created a subset containing only the numeric data. This was achieved by selecting the numeric columns from the `data_clean` dataset using the `sapply()` function. Then, we created a new data set (`numeric_data`) that contained only the numeric columns, so that we can focus on the variables that are relevant for numerical analysis and exclude any non-numeric columns that could complicate the process.
+
+We identified constant columns once again: we calculated the standard deviation of each column, and if the standard deviation was 0, it indicated that the column was constant. These columns were flagged and removed from the data set. Removing them ensured that only meaningful columns remained in the data set.
+
+Afterwards, we examined the correlation between the columns in the numeric data set, which measures the relationship between two variables. We used the `cor()` function to compute the correlation matrix, with the `use = "pairwise.complete.obs"` argument ensuring that only complete pairs of observations were used, ignoring any missing values. This step was necessary to understand how the variables relate to each other and to avoid issues that arise from highly correlated features, since highly correlated columns can cause multicollinearity in modeling.
+
+Since highly correlated variables can distort the results of regression models and lead to less reliable interpretations, we identified columns with high correlation, meaning a correlation coefficient greater than 0.90. These columns were selected using the `findCorrelation()` function and removed from the data set.
+
+Since `high_cor` contained the indices of the highly correlated columns, we excluded those columns from the `numeric_data` dataset.
+
+The resulting data set, named `filtered_data`, now contains only the variables that are relevant and not highly correlated. This step was crucial to ensure that we had a data set with distinct and useful features for further analysis.
+
+### Imputation
+
+
+
+```{r}
+ # List of different imputation methods to test
+method_list <- c("pmm", "rf", "cart")
+
+# Store the imputed datasets
+imputed_datasets <- list()
+
+for (method in method_list) {
+  cat("\nRunning:", method, "...\n")
+  
+# Perform imputation using the selected method
+  imputed_datasets[[method]] <- mice(data_clean, method = method, m = 3, maxit = 3, seed = 123)
+}
+
+```
+
+
+
+Thanks to this code, we can test different imputation methods to fill in missing values in the data set `data_clean` and see which one works best for the data set.
+
+The three imputation methods chosen for testing in this code are `"pmm"`, `"rf"`, and `"cart"`.
+
+-   **PMM**: Predictive Mean Matching, a method that uses regression models to impute missing values based on similar observed values.
+
+-   **RF**: Random Forest, a machine learning algorithm that can be used to predict missing values based on the relationships between other variables in the dataset.
+
+-   **CART**: Classification and Regression Trees, a decision tree method that can be used for both classification and regression tasks, and it is also effective in imputing missing data.
+
+After we defined the list of imputation methods, the code loops through each of these methods one by one to apply them to our dataset. For each method, a message is printed to let us know which method is currently being used. This makes it easier for us to follow the process, especially when we are running multiple methods.
+
+For each method, the imputation is performed on the `data_clean` data set: the code creates three different versions of the data set, each with the missing values filled in a slightly different way. These multiple datasets help to ensure that the imputed values are reliable and not just based on one estimation.
+
+To make the imputation process more accurate, the method is run three times for each data set. This means that the imputation is refined over three cycles to get better results. By repeating the process, we can be more confident that the filled-in values are close to what the actual values might have been.
+
+Finally, and after performing the imputation for each method, the resulting datasets are stored in a list, which allows us to keep track of which imputed data set came from which method. Each method’s dataset is labeled by the name of the method, so we can easily compare the results later on to see which method worked best for our data set.
+
+
+
+```{r}
+data_comparison <- data.frame(
+  Original = as.numeric(numeric_data[["qc19"]]),  # Original before imputation
+  PMM = as.numeric(complete(imputed_datasets[["pmm"]])[["qc19"]]),  
+  RF = as.numeric(complete(imputed_datasets[["rf"]])[["qc19"]]),  
+  CART = as.numeric(complete(imputed_datasets[["cart"]])[["qc19"]])  
+)
+
+plot_data <- melt(data_comparison, 
+                  variable.name = "Method", value.name = "qc19_values")
+
+```
+
+
+
+The first part of the code creates a new dataset called `data_comparison`, used to compare the original data (before any imputation) with the imputed values. This dataset includes the `qc19` column from the original data and the imputed values from the three different methods (PMM, RF, and CART). Each method’s imputed values are extracted from the imputed datasets we generated earlier and added to the comparison table. The purpose of this is to visually compare the original data with the different imputation methods to see how the imputed values differ.
+
+Then, we use the `reshape2` library to transform the data into a format suitable for plotting. The `melt()` function is used to convert the data into a "long format," where each row represents a value from one of the imputed datasets, along with the method used. The new column called "Method" stores the method names (PMM, RF, and CART), and the column `qc19_values` stores the values for the `qc19` column from each dataset.
+
+
+
+```{r}
+# Plot 
+ ggplot(plot_data, aes(x = qc19_values, fill = Method)) +
+  geom_histogram(binwidth = 1, alpha = 0.6, position = "identity") +
+  facet_wrap(~Method, scales = "free_y") +  # Separate plots for each method
+  labs(title = "Comparison of Imputation Methods",
+       x = "qc19 Values", y = "Frequency") +
+  theme_minimal()
+ 
+```
+
+
+
+Thanks to this graph, we can compare the distribution of qc19 values across different imputation methods (PMM, RF, CART) and the original dataset.\
+The distributions in each subplot look quite similar, suggesting that the imputed data preserves the original pattern well.\
+Some imputation methods may introduce subtle differences, particularly in the frequency of certain qc19 values, which can be seen in slight variations in bar heights.
+
+## Merging all datasets
+
+
+
+```{r}
+# Step 1:  relevant columns from filtered_data
+selected_data <- filtered_data |>
+  dplyr::select(c(
+    "serialid", "d70", "d71_1", "d71_2", "d71_3", "d72_1", "d72_2", "polintr", "d10", "d25", "d1", "d63", "sd2_1", "sd2_2", "sd2_3", "sd2_4", "sd2_5", "sd2_6", "sd2_7", "sd3", "qc1_4", "qc1_8", "qc1_10", "d8r1", "d8r2", "d8", "qc19"))
+
+# Step 2: relevant columns from `data`
+country_data <- data |>
+  dplyr::select("serialid", "isocntry", "qc17_4", "qc17_3", "qc17_5")
+
+colnames(trans_health_data) <- tolower(colnames(trans_health_data))
+colnames(ilga_data) <- tolower(colnames(ilga_data))
+
+edueco_data <- edueco_data |> 
+  inner_join(trans_health_data, by= "country")
+
+edueco_data <- edueco_data |> 
+  inner_join(ilga_data, by= "country")
+
+# Step 3: Merge country_data with edueco_data based on country codes
+country_data <- country_data %>%
+  inner_join(edueco_data, by = c("isocntry" = "iso2c"))
+
+# Step 4: Merge selected_data with country_data using "serialid" as the key
+merged_data <- selected_data %>%
+  inner_join(country_data, by = "serialid")
+
+
+merged_data <- merged_data |> rename(
+  lifesat = d70,
+  natmat = d71_1,
+  eumat = d71_2,
+  locmat = d71_3,
+  euvoice = d72_1,
+  natvoice = d72_2,
+  gender = d10,
+  community = d25,
+  ideo = d1,
+  class = d63,
+  ethnic = sd2_1,
+  skin = sd2_2,
+  relig = sd2_3,
+  roma = sd2_4,
+  sex = sd2_5,
+  disab = sd2_6,
+  other = sd2_7,
+  religion = sd3,
+  sexdiscr = qc1_4,
+  transdiscr = qc1_8,
+  interdiscr = qc1_10,
+  transgender_civil_dc = qc19,
+  gdp = `NY.GDP.MKTP.CD`,
+  edu_exp_pct = `SE.XPD.TOTL.GD.ZS`,
+  preprim_exp = `PrePrimary (XSPENDP.02.FDPUB.FNCUR)`,
+  prim_exp = `Primary (XSPENDP.1.FDPUB.FNCUR)`,
+  lose_exp = `LowerSecondary (XSPENDP.2.FDPUB.FNCUR)`,
+  upse_exp = `UpperSecondary (XSPENDP.2T3.FDPUB.FNCUR)`,
+  ter_exp = `Tertiary (XSPENDP.3.FDPUB.FNCUR)`,
+  voc_exp = `VocationalTraining (XSPENDP.4.FDPUB.FNCUR)`,
+  school_div_sexual_orientation = qc17_3,
+  school_div_transgender = qc17_4,
+  school_div_intersex= qc17_5, 
+  age_edu = d8,
+  age_edu_5cat = d8r1,
+  age_edu_11cat = d8r2,
+  nolger = `no legal framework making legal gender recognition impossible`,
+exist_lgme = `existence of legal measures`,
+exist_adm = `existence of administrative procedures`,
+name_change = `name change`,
+nar_name_change = `no age restriction, name change`,
+self_det = `self-determination`,
+nb_recog = `non-binary recognition`,
+psych_diag = `no 'gender identity disorder' diagnosis/psychological opinion required`,
+med_interven = `no compulsory medical intervention required`,
+surg_interven = `no compulsory surgical intervention required`,
+steril_req = `no compulsory sterilisation required`,
+div_req = `no compulsory divorce required`,
+age_restrict = `no age restriction`,
+lgrp_minors = `legal gender recognition procedures exist for minors`,
+depath = `depathologisation`
+
+
+)
+
+
+merged_data<- merged_data |> 
+  dplyr::select(-c(x, isocntry, ...1))
+  
+  
+merged_data <- merged_data |> dplyr::select(country, iso3c, everything())
+
+
+
+write.csv(merged_data, "final_data.csv", col.names = TRUE)
+
+```
+
+
+
+## Descriptive Analysis
+
+In this section, we aim to identify factors influencing support for or opposition to transgender rights, particularly the ability to change civil documents. Our analysis will alternate between individual-level and country-level perspectives
+
+
+
+```{r, message = FALSE}
+final_data <-read_csv("data_cleaning_files/final_data.csv")
+
+final_data<- final_data[, -1]
+```
+
+
+
+#### Missing data imputation
+
+
+
+```{r}
+#numeric variables
+summary(final_data)
+
+```
+
+```{r}
+# Visualize missing values
+gg_miss_var(final_data) +
+  theme_minimal() +
+  labs(title = "Missing Data Patterns")
+
+```
+
+
+
+In this analysis, we examined the missing data patterns in the dataset to assess data completeness and identify potential issues. The visualization helped determine which variables contain missing values and to what extent. While some variables were fully observed, others had significant gaps, requiring appropriate handling strategies.
+
+
+
+```{r}
+# Ensure final_data is a data frame
+final_data <- as.data.frame(final_data)
+
+# only variables with missing data for imputation
+impute_vars <- final_data %>% dplyr::select(`preprim_exp`, `prim_exp`, `lose_exp`, `upse_exp`, `voc_exp`)
+
+# Generate a predictor matrix
+predictorMatrix <- make.predictorMatrix(impute_vars)
+
+imputed_data <- mice(impute_vars, method = "mean", m = 5, maxit = 10, seed = 123)
+
+# Replace missing values with the first imputed dataset
+final_data <- final_data %>%
+  mutate(
+    preprim_exp = complete(imputed_data, 1)$preprim_exp,
+    prim_exp = complete(imputed_data, 1)$prim_exp,
+    lose_exp = complete(imputed_data, 1)$lose_exp,
+    upse_exp = complete(imputed_data, 1)$upse_exp,
+    voc_exp = complete(imputed_data, 1)$voc_exp
+  )
+
+# Check if imputation worked correctly
+summary(final_data$voc_exp)
+summary(final_data$preprim_exp)
+summary(final_data$prim_exp)
+summary(final_data$lose_exp)
+summary(final_data$upse_exp)
+
+```
+
+
+
+We handled missing data using mean imputation with the MICE package. This method replaces missing values with the average of observed values for each variable, preventing data loss while maintaining consistency. We focused on five education expenditure variables (preprim_exp, prim_exp, lose_exp, upse_exp, voc_exp), ensuring they no longer contain missing values.
+
+After imputation, the summary statistics confirmed that all variables now have complete data, with reasonable mean and range values. However, since mean imputation can reduce variability, we need to check whether the data distribution has been affected. Notably, voc_exp has a minimum value of 0, unlike other variables with higher minimums, suggesting a different distribution pattern.
+
+Overall, our imputation process successfully addressed missing data, making the dataset more reliable for further analysis. To ensure the imputed values align well with the data structure, we recommend additional visual checks, such as histograms or density plots.
+
+
+
+```{r}
+# Visualize missing values
+gg_miss_var(final_data) +
+  theme_minimal() +
+  labs(title = "After Imputation, Missing Data Patterns")
+
+```
+
+
+
+The visualization confirms that after performing mean imputation, all missing values in the dataset have been successfully handled. The vertical bar at zero missing values indicates that no variables contain missing data anymore. This means our imputation process effectively filled in all gaps, making the dataset complete and ready for further analysis.
+
+### **Descriptive Statistic**
+
+### **(1) Individual-Level Data**
+
+
+
+```{r}
+#  only individual-level variables
+individual_vars <- final_data %>%
+  dplyr::select(gender, age_edu_5cat, age_edu_11cat, polintr, natvoice, euvoice, relig, 
+         roma, skin, sexdiscr, transdiscr, school_div_transgender, 
+         school_div_sexual_orientation, school_div_intersex, transgender_civil_dc)
+
+```
+
+
+
+We categorized survey variables into meaningful groups (e.g., Demographics, Identity, School Measures). Then, we reshaped the data into a long format and assigned clear labels for better interpretation. We created histograms to visualize the distribution of numerical variables and a bar chart to analyze categorical variables (e.g., gender). The workflow enhances data organization, clarity, and visualization for better insights.
+
+
+
+```{r}
+
+
+# Function to Categorize Variables
+categorize_variables <- function(var_name) {
+  if (var_name %in% c("age_edu_5cat", "age_edu_11cat", "skin")) {
+    return("Demographics")
+  } else if (var_name %in% c("school_div_intersex", "school_div_sexual_orientation", "school_div_transgender")) {
+    return("School Should Give Information Measures")
+  } else if (var_name %in% c("natvoice", "euvoice")) {
+    return("Voice Representation")
+  } else if (var_name %in% c("relig", "roma")) {
+    return("Identity")
+  } else {
+    return("Other Variables")
+  }
+}
+
+# Prepare Data
+improved_data <- individual_vars %>%
+  pivot_longer(cols = everything(), names_to = "Variable", values_to = "Value") %>%
+  mutate(
+    Variable_Group = sapply(Variable, categorize_variables),
+    Variable_Label = case_when(
+      Variable == "age_edu_5cat" ~ "Age-Education (5 cat)",
+      Variable == "age_edu_11cat" ~ "Age-Education (11 cat)",
+      Variable == "skin" ~ "Skin Color",
+      Variable == "school_div_intersex" ~ "School Diversity (Intersex)",
+      Variable == "school_div_sexual_orientation" ~ "School Diversity (Sexual Orientation)",
+      Variable == "school_div_transgender" ~ "School Diversity (Transgender)",
+      Variable == "natvoice" ~ "Native Voice",
+      Variable == "euvoice" ~ "European Voice",
+      Variable == "polintr" ~ "Political Interest",
+      Variable == "relig" ~ "Religion",
+      Variable == "roma" ~ "Roma Identity",
+      Variable == "sexdiscr" ~ "Sexual Discrimination",
+      Variable == "transdiscr" ~ "Transgender Discrimination",
+      TRUE ~ Variable
+    )
+  )
+
+# Function to Create Histograms
+create_improved_histogram <- function(data, group_name) {
+  filtered_data <- data %>% filter(Variable_Group == group_name)
+
+  ggplot(filtered_data, aes(x = Value)) +
+    geom_histogram(bins = 15, color = "white", fill = "blue", alpha = 0.9) +
+    facet_wrap(~replace_na(Variable_Label, "Unknown"), scales = "free", ncol = 2) +
+    labs(
+      title = paste("Distribution of", group_name),
+      x = "Value",
+      y = "Frequency",
+      caption = "Values shown as frequencies rather than percentages for better readability"
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(
+      plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+      axis.title = element_text(size = 12, face = "bold"),
+      axis.text.x = element_text(angle = 30, hjust = 1, size = 10),
+      axis.text.y = element_text(size = 10),
+      strip.text = element_text(size = 12, face = "bold"),
+      strip.background = element_rect(fill = "lightgray", color = NA),
+      panel.spacing = unit(1, "lines"),
+      legend.position = "right",
+    )
+}
+
+# Generate Histograms
+demographics_plot <- create_improved_histogram(improved_data, "Demographics")
+information_plot <- create_improved_histogram(improved_data, "School Should Give Information Measures")
+voice_plot <- create_improved_histogram(improved_data, "Voice Representation")
+identity_plot <- create_improved_histogram(improved_data, "Identity")
+other_plot <- create_improved_histogram(improved_data, "Other Variables")
+
+# Function to Create Bar Charts
+create_bar_chart <- function(data, variable_name) {
+  if (!variable_name %in% colnames(data)) {
+    stop(paste("Error: Column", variable_name, "not found in data!"))
+  }
+
+  var_data <- data %>%
+    dplyr::select(all_of(variable_name)) %>%
+    rename(Value = all_of(variable_name)) %>%
+    drop_na() %>%  # Remove missing values
+    group_by(Value) %>%
+    summarize(Count = n(), .groups = "drop") %>%
+    mutate(
+      Percentage = Count / sum(Count) * 100,
+      Value = factor(Value)
+    )
+
+  var_label <- improved_data %>%
+    filter(Variable == variable_name) %>%
+    pull(Variable_Label) %>%
+    unique()
+
+  if (length(var_label) == 0) {
+    var_label <- variable_name
+  }
+
+  ggplot(var_data, aes(x = Value, y = Percentage, fill = Percentage)) +
+    geom_bar(stat = "identity", width = 0.7) +
+    geom_text(aes(label = sprintf("%.1f%%", Percentage)), position = position_stack(vjust = 0.5), color = "black") +
+    labs(title = paste("Distribution of", var_label), x = "Category", y = "Percentage (%)") +
+    theme_minimal()
+}
+
+# Generate Bar Chart for Gender
+if ("gender" %in% colnames(individual_vars)) {
+  gender_bar <- create_bar_chart(individual_vars, "gender")
+} else {
+  print("Warning: The column 'gender' is missing from the dataset!")
+}
+
+
+```
+
+
+
+#### Demographics: Age-Education Distribution Analysis
+
+
+
+```{r}
+demographics_plot
+```
+
+
+
+This variable categorizes individuals based on the age at which they completed full-time education. The dataset contains two versions: an **11-category classification** and a **simplified 5-category grouping**.
+
+In the **detailed 11-category version**, respondents are categorized from **"Up to 14 years" (1) to "22 years and older" (9)**, alongside **"Still studying" (10)** and **"No full-time education" (11)**. The most common completion ages are **15 years (2) and 16 years (3)**, suggesting that a significant proportion of individuals exit full-time education during their teenage years. In contrast, fewer respondents remain in school past the age of 21.
+
+The **simplified 5-category classification** merges some of these distinctions, grouping individuals as:\
+- **"Up to 15 years" (1):** Those who left school by age 15.\
+- **"16-19 years" (2):** Individuals who completed education in their late teens.\
+- **"20 years and older" (3):** Those pursuing education beyond 19.\
+- **"Still studying" (4):** Respondents currently in full-time education.\
+- **"No full-time education" (5):** Individuals who never attended full-time education.
+
+Across both classifications, the data highlights that **most individuals leave full-time education at 15 or 16 years old**, with fewer continuing beyond that. The presence of a **"Still studying"** category indicates an active student population, but the relatively low frequencies in higher education categories suggest that **early school leaving is prevalent**.
+
+These findings offer insights into **educational attainment trends** and could be useful for **policymakers looking to improve retention in higher education**.
+
+Additionally, The skin color variable helps categorize individuals based on whether they identify as a minority in terms of skin color. This distinction is crucial in understanding social dynamics, as it can provide insights into experiences of discrimination, representation, and equality within different groups.
+
+The dataset includes two main categories. The first category (**0 - Not mentioned**) represents individuals who do not identify as part of a racial or ethnic minority based on their skin color. The second category (**1 - A minority in terms of skin color**) includes individuals who perceive themselves as belonging to a racial or ethnic minority group due to their skin tone.
+
+The distribution of responses shows that the vast majority of individuals fall into the "Not mentioned" category, meaning they do not consider themselves as part of a skin color minority. In contrast, a much smaller proportion of respondents identify as belonging to a racial minority.
+
+This finding suggests that racial or ethnic minorities based on skin color constitute a relatively small fraction of the dataset. Understanding this demographic breakdown is essential when examining disparities in economic opportunities, access to education, or social integration. Additionally, this variable can be used to investigate potential discrimination or differences in social perception based on racial identity.
+
+#### School Diversity Attitudes
+
+
+
+```{r}
+ information_plot
+
+```
+
+
+
+The graph illustrates respondents' opinions on whether schools should provide education about diversity concerning intersex individuals, sexual orientation, and transgender identity. The response categories range from "Totally agree" (1) to "Totally disagree" (4), with an additional category for "Don't know" (5).
+
+The results indicate that the majority of respondents either "Totally agree" (1) or "Tend to agree" (2) that schools should inform students about diversity in these areas. The highest agreement is observed across all three categories, suggesting broad support for diversity education. However, a notable proportion of respondents "Tend to disagree" (3) or "Totally disagree" (4), reflecting some resistance to integrating these topics into school curricula. Overall, the findings suggest that while most people recognize the importance of diversity education, there are still opposing views that indicate societal divisions on this issue.
+
+#### Voice Representation
+
+
+
+```{r}
+voice_plot
+```
+
+
+
+The graph represents perceptions of voice representation in two contexts: at the European level ("European Voice") and at the national level ("Native Voice"). The responses are categorized into levels of agreement, ranging from "Totally agree" (1) to "Totally disagree" (4), with additional categories for refusals and unknown responses.
+
+The data suggests that a significant portion of respondents "Tend to agree" (2) that their voice is heard both in their country and in the EU, making it the most common response. However, there are also notable groups that "Tend to disagree" (3) or "Totally disagree" (4), indicating skepticism about their influence in political or social discussions. The distribution is relatively similar for both European and national contexts, suggesting that perceptions of representation do not differ drastically between these two levels.
+
+#### Identity
+
+
+
+```{r}
+identity_plot
+```
+
+
+
+The dataset analysis highlights how many people identify as religious or ethnic minorities. The graphs show that most individuals do not consider themselves part of these groups. In particular, only a small number identify as part of a religious minority, and the same goes for those who declare a Roma identity.
+
+#### Gender
+
+
+
+```{r}
+gender_bar
+```
+
+
+
+According to the results, 54.7% of the respondents are female, while 45.3% are male. This indicates a slight overrepresentation of females in the survey compared to males. The relatively balanced distribution suggests that responses are not significantly skewed toward one gender, allowing for a more comprehensive analysis of gender-based trends and perspectives.
+
+#### Other variables
+
+
+
+```{r}
+other_plot
+```
+
+
+
+##### Discrimination Based on Sexual Orientation and Gender Identity
+
+Discrimination against individuals based on their **sexual orientation and gender identity** remains a significant issue across various societies. The survey categorizes public perceptions of discrimination into six levels: **Very widespread, Fairly widespread, Fairly rare, Very rare, Non-existent (Spontaneous), and Don’t know (DK)**. These categories help assess the extent to which individuals recognize discrimination in their respective countries.
+
+The results indicate that **the majority of respondents perceive discrimination as either very or fairly widespread**. This suggests that LGBTQ+ individuals, particularly transgender people, continue to face systemic barriers in social, legal, and professional spheres. A smaller proportion of respondents consider discrimination **fairly rare or very rare**, implying regional differences in attitudes and legal frameworks that either mitigate or reinforce these experiences.
+
+Interestingly, **very few respondents believe that discrimination does not exist at all**, reinforcing the notion that discrimination is a recognized issue, even in more progressive societies. Additionally, the presence of responses in the **"Don’t know" category** indicates a lack of awareness or reluctance to express opinions on this subject, which may be influenced by cultural sensitivities or personal biases.
+
+Comparing discrimination against transgender individuals and sexual orientation-based discrimination, **the perception of discrimination against transgender individuals appears slightly higher**. This may stem from the additional social and legal barriers that transgender individuals face, including restrictions on gender recognition, healthcare access, and workplace inclusion.
+
+These findings emphasize the need for **stronger anti-discrimination policies, legal protections, and social awareness initiatives** to ensure the fair treatment of LGBTQ+ individuals. Addressing these issues through education and policy reforms is crucial for fostering inclusive societies that respect and uphold the rights of all individuals, regardless of their gender identity or sexual orientation.
+
+##### Political Interest
+
+The Political Interest Index categorizes respondents into four levels: Strong (1), Medium (2), Low (3), and Not at all (4). The distribution shows that the majority of respondents fall into the Medium category, suggesting that most individuals engage with politics to some degree but do not exhibit strong interest. Meanwhile, fewer respondents report either strong political interest or no interest at all. This suggests a general trend toward moderate political engagement among participants.
+
+##### Religion
+
+
+
+```{r}
+religion_labels <- c(
+  "1" = "Catholic",
+  "2" = "Orthodox Christian",
+  "3" = "Protestant",
+  "4" = "Other Christian",
+  "5" = "Jewish",
+  "6" = "Muslim - Shia",
+  "7" = "Muslim - Sunni",
+  "8" = "Other Muslim",
+  "9" = "Sikh",
+  "10" = "Buddhist",
+  "11" = "Hindu",
+  "12" = "Atheist",
+  "13" = "Non believer / Agnostic",
+  "14" = "Other",
+  "15" = "Refusal",
+  "16" = "Don't Know"
+)
+
+final_data <- final_data %>%
+  filter(religion %in% names(religion_labels))
+
+# Convert religion variable to factor with specific labels
+final_data$religion1 <- factor(final_data$religion, 
+                              levels = names(religion_labels), 
+                              labels = religion_labels)
+
+# Count occurrences
+religion_counts <- final_data %>%
+  group_by(religion1) %>%
+  summarise(Count = n()) %>%
+  arrange(Count)
+
+# Calculate percentages
+religion_counts <- religion_counts %>%
+  mutate(Percentage = (Count / sum(Count)) * 100)
+
+# Create bar plot
+ggplot(religion_counts, aes(x = reorder(religion1, Count), y = Percentage, fill = religion1)) +
+  geom_bar(stat = "identity", width = 0.7) +
+  coord_flip()+
+  labs(
+    title = "Distribution of Religions",
+    x = "Religion",
+    y = "Percentage (%)",
+    fill = "Religion"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+    axis.text.x = element_text(size = 10, angle = 45, hjust = 1),
+    axis.title = element_text(size = 14, face = "bold"),
+    legend.position = "none"
+  )
+
+```
+
+
+
+The distribution of religious denominations shows that Catholicism is the most dominant religion, followed by Orthodox Christianity and Protestantism, while Non-believers/Agnostics and Atheists also represent a significant portion, indicating a strong secular trend. Muslim groups, including Sunni, Shia, and Other Muslim, are relatively small, suggesting they are a minority in the surveyed population. Other religions, such as Buddhism, Judaism, Hinduism, and Sikhism, have minimal representation. Additionally, a small percentage of respondents either refused to disclose their religious affiliation or selected “Don’t Know,” highlighting potential reluctance or uncertainty regarding religious identity. The data overall reflects a predominantly Christian population with notable secular tendencies and limited religious diversity.
+
+
+
+```{r}
+final_data$iso3c1 <-as.numeric(final_data$iso3c)
+
+western_europe <- c("BEL", "DNK", "GRC", "ESP", "FIN", "FRA", "IRL", "ITA", "LUX", "NLD", "AUT", "PRT", "SWE")
+eastern_europe <- c("BGR", "CYP", "CZE", "EST", "HUN", "LVA", "LTU", "MLT", "POL", "ROU", "SVN", "HRV")
+
+west_data <- final_data[final_data$iso3c %in% western_europe, ]
+east_data <- final_data[final_data$iso3c %in% eastern_europe, ]
+
+
+mean_west <- mean(west_data$transgender_civil_dc)
+mean_east <- mean(east_data$transgender_civil_dc)
+
+cat("Average Support in Western Europe: ", mean_west, "\n")
+cat("Average Support in Eastern Europe: ", mean_east, "\n")
+
+```
+
+```{r}
+final_data$region <- ifelse(final_data$iso3c %in% western_europe, "Western Europe", 
+                            ifelse(final_data$iso3c %in% eastern_europe, "Eastern Europe", NA))
+
+# Calculate the support percentage by region (Western vs. Eastern Europe)
+region_support <- final_data %>%
+  group_by(region) %>%
+  summarise(support_percentage = mean(transgender_civil_dc == 1, na.rm = TRUE) * 100)
+
+# View the support percentage by region
+print(region_support)
+
+# Bar plot for support percentage by region
+ggplot(region_support, aes(x = region, y = support_percentage, fill = region)) +
+  geom_bar(stat = "identity", show.legend = FALSE) +
+  labs(title = "Support for Transgender Rights by Region", 
+       x = "Region", 
+       y = "Support Percentage (%)") +
+  scale_fill_manual(values = c("#3C8BFA", "#663CFA")) +
+  theme_minimal()
+
+```
+
+```{r}
+summary(final_data)
+
+table(final_data$transgender_civil_dc)
+prop.table(table(final_data$transgender_civil_dc)) * 100 
+```
+
+
+
+#### gina's graph
+
+
+
+```{r}
+education_levels <- final_data %>%
+  mutate(ISCED_Level = case_when(
+    age_edu == 00 ~ "Still Studying",  # Separate category
+    age_edu == 01 ~ "No Formal Education",  # No formal schooling
+    age_edu == 98 | age_edu == 99 ~ "Refused / Don't Know",  # Separate category
+    age_edu < 5  ~ "Pre-primary",
+    age_edu >= 5 & age_edu <= 10  ~ "Primary",
+    age_edu >= 11 & age_edu <= 14  ~ "Lower Secondary",
+    age_edu >= 15 & age_edu <= 18  ~ "Upper Secondary",
+    age_edu >= 16 & age_edu <= 19  ~ "Vocational",
+    age_edu >= 19  ~ "Tertiary",
+    TRUE ~ NA_character_
+  ))
+
+education_summary <- education_levels %>%
+  group_by(country, ISCED_Level) %>%
+  summarise(Count = n(), .groups = "drop") %>%
+  arrange(country, desc(Count))
+
+education_spending_summary <- education_summary %>%
+  left_join(final_data %>%
+              group_by(country) %>%
+              summarise(
+                Primary_Spending = mean(prim_exp, na.rm = TRUE),
+                Lower_Secondary_Spending = mean(lose_exp, na.rm = TRUE),
+                Upper_Secondary_Spending = mean(upse_exp, na.rm = TRUE),
+                Vocational_Spending = mean(voc_exp, na.rm = TRUE),
+                Tertiary_Spending = mean(ter_exp, na.rm = TRUE)
+              ), by = "country")  
+
+hchart(education_summary, "column", 
+       hcaes(x = country, y = Count, group = ISCED_Level)) %>%
+  hc_chart(
+    type = "column",
+    backgroundColor = list(
+      linearGradient = list(x1 = 0, y1 = 0, x2 = 0, y2 = 1),
+      stops = list(
+        list(0, 'white'),    
+        list(1, 'white')     
+      )
+    )
+  ) %>%
+  hc_plotOptions(column = list(stacking = "normal")) %>%  # Enable stacking
+  hc_title(text = "Highest Education Level Reached Per Country (Stacked)", 
+           style = list(color = "black", fontSize = "20px")) %>%
+  hc_xAxis(title = list(text = "Country", style = list(color = "black")), 
+           labels = list(style = list(color = "black"), rotation = -45)) %>%
+  hc_yAxis(title = list(text = "Number of Respondents", style = list(color = "black")), 
+           labels = list(style = list(color = "black")),
+           max = 1050,
+            tickInterval = 150) %>%
+ hc_colors(c("#3498db", "#f39c12", "#e74c3c", "#9b59b6", "#2ecc71", "#34495e", "#1abc9c", "#d35400")) %>% 
+   hc_legend(reversed = TRUE)%>%
+  hc_tooltip(useHTML = TRUE, 
+             pointFormat = "<b>{point.country}</b><br>
+                           Education Level: {point.ISCED_Level}<br>
+                           Respondents: {point.y}")
+
+
+
+```
+
+
+
+#### Distribution of responses to Question 19…
+
+
+
+```{r}
+data <- data %>%
+  mutate(qc19 = as_factor(qc19),
+         gender = as_factor(d10))
+
+qc19_country_gender_dist <- data%>%
+  group_by(isocntry, gender, qc19) %>%
+  summarise(count = n(), .groups = 'drop')
+
+```
+
+```{r}
+ggplot(qc19_country_gender_dist, aes(x = qc19, y = count, fill = gender)) +
+  geom_col(position = "dodge", width = 0.7) +  # Dodge to separate gender groups
+  facet_wrap(~isocntry, scales = "fixed") +  # Fix the y-axis across all countries
+  scale_fill_manual(values = c("Man" = "#3C8BFA", "Woman" = "#663CFA")) +  # Gender colors
+  scale_y_continuous(limits = c(0, 400), oob = scales::squish) +  # Set y-axis range and clip outside values
+  labs(title = "Distribution of qc19 Responses by Country and Gender",
+       x = "Response Type", y = "Response Count", fill = "Gender") +
+  theme_minimal(base_size = 10) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 6),  
+    legend.position = "bottom",
+    legend.text = element_text(size = 8),
+    legend.title = element_text(size = 9, face = "bold"),
+    legend.key.size = unit(0.4, "cm"),
+    panel.grid.major.x = element_blank(),
+    strip.text = element_text(size = 8, face = "bold"),
+    strip.background = element_rect(fill = "gray90", color = "black"),
+    panel.spacing = unit(1, "lines")
+  )
+
+```
+
+
+
+The graph shows the distribution of responses to question 19 ( `qc19` ) across different countries, split by gender.
+
+It shows that, in some countries, men tend to give a higher number of "Yes" responses, while women tend to answer "No" or "Don't Know" more frequently. This suggests that gender may influence how people answer the question in different regions.
+
+In countries like Austria (AT), Great Britain (GB), and Spain (ES), responses are fairly balanced between genders. However, in countries such as Poland (PL) and Portugal (PT), one gender seems to dominate a particular response category, indicating a possible cultural or regional difference in how men and women approach the question.
+
+Overall, Western European countries show more "Yes" responses, while Eastern European countries show higher proportions of "No" or "Don't Know" responses. These differences might be influenced by societal or cultural factors.
+
+This graph highlights the role of both gender and cultural context in shaping responses to the same question across different countries. Understanding these differences could offer insights into the social and cultural dynamics at play.
+
+##### …by gender
+
+We decided to visualize gender-based distribution to ensure that any systematic differences between male and female responses are identified.
+
+
+
+```{r}
+ggplot(qc19_country_gender_dist, aes(x = gender, y = count, fill = gender)) +
+  geom_boxplot() +
+  facet_wrap(~qc19) +  
+  scale_fill_manual(values = c("Man" = "#3C8BFA", "Woman" = "#663CFA")) +
+  labs(title = "Distribution of qc19 Responses by Gender",
+       x = "Gender", y = "Response Count") +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "none")
+
+```
+
+
+
+This boxplot illustrates that women tend to have slightly higher counts across response categories (Yes, No, DK), as indicated by the median and interquartile range.\
+The “DK” category shows a lower response count overall, with some outliers.\
+The spread of responses is wider for Yes and No, indicating more variation in responses among men and women.
+
+##### …by country
+
+We wanted to visualize how responses to question 19 are distributed across different countries.
+
+
+
+```{r}
+data$isocntry <- reorder(data$isocntry, as.numeric(data$qc19), mean)  # Order by mean qc19 response
+
+ggplot(data, aes(x = isocntry, y = as.numeric(qc19))) +
+  geom_violin(width = 0.9, fill = "#3C8BFA", color = "black") +  # Make violins wider
+  geom_boxplot(width = 0.2, outlier.shape = NA) +  # Add boxplot overlay
+  stat_summary(fun = mean, geom = "point", color = "red", size = 2) +  # Highlight means
+  scale_y_continuous(breaks = c(1, 2, 3), labels = c("Yes", "No", "DK")) +
+  labs(title = "Distribution of qc19 Responses by Country (Ordered by Mean)",
+     x = "Country", y = "qc19 Response Score") +
+theme_minimal() +
+theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),  # Adjust font size
+      plot.title = element_text(size = 14, face = "bold")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+
+In this **violin plot**, countries are ordered by the mean response score, which helps to compare countries based on their general tendency to answer the question. The red points highlighting the mean for each country provide a quick way to identify where each country stands in terms of overall response. This makes it easier to compare countries at a glance, much like the previous bar plot we used, but with more detailed distribution information.
+
+While the previous bar plot helped us compare the responses between men and women across countries, this violin plot allows us to examine the distribution in more detail. In the bar plot, we could see that some countries had a higher count of "Yes" or "No" responses, but the violin plot provides a deeper understanding of how those responses are spread. For example, in some countries, the responses are tightly grouped around a specific value (like "Yes"), while in others, the responses are more spread out across "Yes", "No", and "DK".
+
+From the graph, it’s clear that there are significant differences in the response distributions across countries. In some countries, the "Yes" response is much more common, while in others, "No" responses dominate. For example, in some Western European countries (such as the UK and Spain), the "Yes" response is more frequent, while in Eastern European countries (like Poland and Romania), "No" responses are higher. This suggests that cultural and societal factors in each country might influence how people answer such questions.
+
+Another notable observation regards the "Don't Know" (DK) category: in some countries, especially in Northern Europe (like Sweden), there’s a higher frequency of "Don't Know" responses. This could indicate that people in these countries are more uncertain or hesitant to provide a definitive answer.
+
+Additionally, some countries have wider violin plots, which indicates that responses in those countries are more spread out, meaning people gave more varied answers. This could reflect a society with diverse opinions and viewpoints.
+
+In conclusion, the differences across countries shed light on how cultural factors and societal norms influence responses to questions like this. Gender differences in responses also stand out in certain countries, suggesting that gender plays a significant role in how people answer, influenced by cultural and social contexts.
+
+### (2) Country-Level Data
+
+
+
+```{r}
+country_vars <- final_data %>%
+  group_by(iso3c) %>%
+  summarise(
+    Avg_Support = mean(as.numeric(transgender_civil_dc), na.rm = TRUE),
+    GDP = mean(gdp, na.rm = TRUE),
+    Education_Expenditure = mean(edu_exp_pct, na.rm = TRUE),
+    Preprimary_Education = mean(preprim_exp, na.rm = TRUE),
+    Primary_Education = mean(prim_exp, na.rm = TRUE),
+    Lower_Secondary_Education = mean(lose_exp, na.rm = TRUE),
+    Upper_Secondary_Education = mean(upse_exp, na.rm = TRUE),
+    Tertiary_Education = mean(ter_exp, na.rm = TRUE),
+    Vocational_Education = mean(voc_exp, na.rm = TRUE)
+  )
+
+```
+
+```{r}
+final_data %>%
+  group_by(iso3c) %>%
+  summarise(Support_Rate = mean(transgender_civil_dc, na.rm = TRUE) * 100) %>%
+  arrange(desc(Support_Rate))
+```
+
+
+
+#### Economic Summary
+
+
+
+```{r}
+economic_summary <- final_data |> 
+  group_by(country) |> 
+  summarise(
+    avg_gdp = mean(gdp, na.rm = TRUE),
+    avg_edu_exp = mean(edu_exp_pct, na.rm = TRUE),
+    avg_preprim_exp = mean(preprim_exp, na.rm = TRUE),
+    avg_prim_exp = mean(prim_exp, na.rm = TRUE),
+    avg_lose_exp = mean(lose_exp, na.rm = TRUE),
+    avg_upse_exp = mean(upse_exp, na.rm = TRUE),
+    avg_ter_exp = mean(ter_exp, na.rm = TRUE),
+    avg_voc_exp = mean(voc_exp, na.rm = TRUE)
+  )
+
+print(economic_summary)
+
+```
+
+```{r}
+econ_data <- final_data[, c("gdp", "edu_exp_pct", "preprim_exp", 
+                            "prim_exp", "lose_exp", "upse_exp", "ter_exp", "voc_exp")]
+
+econ_long <- econ_data |> pivot_longer(cols = everything(), names_to = "Variable", values_to = "Value")
+
+ggplot(econ_long, aes(x = Value, fill = Variable)) +
+  geom_histogram(bins = 30, alpha = 0.7, color = "black") +
+  facet_wrap(~Variable, scales = "free") + 
+  theme_minimal() +
+  labs(title = "Distribution of Economical Variables ", x = "Value", y = "Frequency")+
+  theme(legend.position = "bottom",
+    legend.text = element_text(size = 8),
+    legend.title = element_text(size = 9, face = "bold"),
+    legend.key.size = unit(0.4, "cm"))
+
+```
+
+
+
+The distribution of **education expenditure as a percentage of GDP (edu_exp_pct)** shows that most countries allocate between 4% and 6% of their GDP to education, with some outliers spending more than 7%. This suggests that education is a significant budget priority, but the variation indicates differing national policies and economic capabilities.
+
+The **GDP distribution** is highly skewed, with most observations concentrated at lower values and a few countries with significantly higher GDPs. This highlights economic disparities among the nations in the dataset, where a small number of countries dominate in terms of economic output.
+
+When examining **education expenditure across different levels**, lower secondary (lose_exp), upper secondary (upse_exp), and tertiary education (ter_exp) expenditures are concentrated in the 90-97% range. This suggests that most countries prioritize these educational stages, ensuring substantial funding. Primary education (prim_exp) also receives strong investment, with values largely between 85% and 100%, showing consistency in educational priorities.
+
+On the other hand, **pre-primary education expenditure (preprim_exp)** displays a more dispersed distribution, though most values remain high, indicating recognition of the importance of early childhood education. In contrast, **vocational education expenditure (voc_exp)** exhibits a more varied pattern, with peaks at both 75% and 100%, suggesting that while some countries emphasize vocational training, others invest less in this area.
+
+Overall, the distributions illustrate a global trend of strong financial commitment to general education, with some variations in economic capacity and prioritization of specific educational stages.
+
+#### GDP vs. Education Expenditure
+
+We wanted to analyze the relationship between GDP and total education spending across European countries. The dataset was first prepared by removing missing values and transforming GDP into trillions of USD. Education expenditure was computed as a percentage of GDP and converted into billions of USD. A categorical variable (“Spending_Category”) was created to classify spending into four levels: Low (\<20B), Medium (20B-50B), High (50B-100B), and Very High (\>100B).
+
+We decided to visualize it as a bubble chart, where each point represents a country. The x-axis shows GDP (in trillions USD), while the y-axis displays total education spending (in billions USD). The size of each bubble corresponds to the amount spent on education, and colors indicate spending categories: blue for low, gold for medium, orange for high, and dark red for very high.
+
+The chart was customized with an interactive tooltips displaying detailed country-level information, including the percentage of GDP allocated to education.
+
+
+
+```{r}
+# Prepare data
+data_2019 <- edueco_data %>%
+  drop_na(NY.GDP.MKTP.CD, SE.XPD.TOTL.GD.ZS, country) %>%
+  mutate(GDP_trillions = NY.GDP.MKTP.CD / 1e12,  # Convert GDP to Trillions USD
+         Total_Education_Spending = (NY.GDP.MKTP.CD * SE.XPD.TOTL.GD.ZS) / 100,
+         Spending_Billions = Total_Education_Spending / 1e9,  # Convert Spending to Billions USD
+         Education_Percent_GDP = round(SE.XPD.TOTL.GD.ZS, 2),  # Round % of GDP spent on education
+         Spending_Category = cut(Spending_Billions, 
+                                 breaks = c(-Inf, 20, 50, 100, Inf), 
+                                 labels = c("Low (<20B)", "Medium (20B-50B)", 
+                                            "High (50B-100B)", "Very High (>100B)")))
+
+# Explicitly Define Colors for Categories
+spending_colors <- c("#1E90FF",  # Bright Blue (Low <20B)
+                     "#FFD700",  # Gold (Medium 20B-50B)
+                     "#FF4500",  # Red-Orange (High 50B-100B)
+                     "#8B0000")  # Dark Red (Very High >100B)
+
+# Create the chart with gradient background and y-axis starting at 0
+hchart(data_2019, "bubble", hcaes(x = GDP_trillions, y = Spending_Billions, 
+                                  size = Spending_Billions, group = Spending_Category, 
+                                  name = country)) %>%
+  hc_chart(
+    backgroundColor = list(
+      linearGradient = list(x1 = 0, y1 = 0, x2 = 0, y2 = 1),
+      stops = list(
+        list(0, 'white'),    # Dark blue at the top
+        list(1, 'white')     # Near black at the bottom
+      )
+    )
+  ) %>%
+  hc_title(text = "Education Spending Patterns in Europe (2019)", 
+           style = list(color = "black", fontSize = "20px")) %>%
+  hc_subtitle(text = "Comparing GDP and Total Education Spending", 
+              style = list(color = "black", fontSize = "14px")) %>%
+  hc_xAxis(title = list(text = "GDP (Trillions USD)", style = list(color = "black")),
+           labels = list(style = list(color = "black")),
+           gridLineColor = "#444444") %>%
+  hc_yAxis(title = list(text = "Total Education Spending (Billions USD)", 
+                        style = list(color = "black")),
+           labels = list(style = list(color = "black")),
+           gridLineColor = "#444444",
+           min = 0) %>%  # Set y-axis to start at 0
+  hc_legend(layout = "horizontal", align = "right", verticalAlign = "bottom",
+            itemStyle = list(color = "black")) %>%
+  # Apply Colors Using hc_colors() 
+  hc_colors(spending_colors) %>%
+  hc_tooltip(useHTML = TRUE, 
+             backgroundColor = "white",  # White background
+             borderColor = "black",
+             style = list(color = "black", fontSize = "14px"),  # Ensure all text is black
+             formatter = JS("function() {
+               return '<b>' + this.point.name + '</b><br>' +
+                      '<b>GDP:</b> ' + Highcharts.numberFormat(this.x, 2) + 'T USD<br>' +
+                      '<b>Education Spending:</b> ' + Highcharts.numberFormat(this.y, 2) + 'B USD<br>' +
+                      '<b>% of GDP Spent on Education:</b> ' + Highcharts.numberFormat(this.point.Education_Percent_GDP, 2) + '%<br>' +
+                      '<b>Category:</b> ' + this.series.name;
+             }"))
+
+```
+
+
+
+The bubble chart confirms a clear positive correlation between GDP and education spending: countries with higher GDP tend to allocate more absolute funds to education. However, the proportion of GDP spent on education varies, with some lower-GDP countries dedicating a relatively high percentage. The majority of education spending is concentrated among wealthier nations, as indicated by the clustering of large red bubbles in the upper right quadrant. Lower-GDP countries (blue bubbles) have significantly lower absolute education budgets, likely due to economic constraints.
+
+The variation in spending on education suggests differing national priorities, with some high-GDP nations allocating more funding than others. This highlights economic disparities and policy choices in education investment across Europe.
+
+#### Health Variables
+
+
+
+```{r}
+health_vars_data <-   final_data[,c("psychological.care", "psychiatric.care", 
+         "breast.augmentation", "electrolysis...laser.hair.removal", 
+         "facial.feminisation.surgery", "hrt..oestrogen.", 
+         "hrt..testosterone.", "hysterectomy", "mastectomy", 
+         "metoidioplasty", "orchiectomy", "ovariectomy..aka.oopherectomy.", 
+         "phalloplasty", "tracheal.shave", "vaginoplasty", "vocal.training")]
+
+
+health_vars_long <-health_vars_data|> pivot_longer(cols = everything(), names_to = "Variable", values_to = "Value")
+  
+ggplot(health_vars_long, aes(x = Value, fill = Variable)) +
+  geom_bar(bins = 25, alpha = 0.7, color = "black", position = "dodge") +
+  facet_wrap(~Variable, scales = "free") + 
+  scale_y_continuous(limits = c(0, 20000), oob = scales::squish) + 
+  theme_minimal() +
+  labs(title = "Density Distribution of Health Service Variables" , x = "Value", y = "Frequency")+
+  theme(legend.position = "bottom",
+    legend.text = element_text(size = 8),
+    legend.title = element_text(size = 9, face = "bold"),
+    legend.key.size = unit(0.4, "cm"))
+  
+```
+
+
+
+The distribution of health service variables highlights varying levels of access and demand for different medical interventions. **Hormone replacement therapies (HRT)** for both **testosterone and oestrogen** appear to be widely utilized, with most values concentrated around 1, suggesting high accessibility or demand. Similarly, **psychological and psychiatric care** also show a high density at the lower values, indicating that these services are commonly accessed.
+
+Among surgical procedures, **breast augmentation, electrolysis (laser hair removal), facial feminization surgery, and vocal training** show a skewed distribution towards lower values, suggesting that while some individuals access these services, they may not be as widely available or utilized. In contrast, more invasive procedures such as **hysterectomy, mastectomy, metoidioplasty, orchiectomy, and phalloplasty** exhibit a more spread-out distribution, possibly reflecting differences in medical eligibility, personal choice, or systemic barriers to access.
+
+Lastly, **tracheal shave and vaginoplasty** follow similar patterns, with most density at the lower end, indicating that while these procedures are available, fewer individuals access them compared to psychological or hormonal treatments. Overall, the distribution suggests a tiered access to gender-affirming care, where non-surgical and hormonal interventions are more frequently used than complex surgical procedures.
+
+#### Legal Variables
+
+
+
+```{r}
+legal_vars_data <- final_data[,c(
+"nolger", "exist_lgme", "exist_adm", "name_change", "nar_name_change",  "self_det", "nb_recog", "psych_diag", "med_interven", "surg_interven", "steril_req", 
+         "div_req", "age_restrict", "lgrp_minors","depath") ]
+
+legal_vars_long <-legal_vars_data|> pivot_longer(cols = everything(), names_to = "Variable", values_to = "Value")
+
+
+ggplot(legal_vars_long, aes(x = Value, fill = Variable)) +
+  geom_bar(bins = 30, alpha = 0.7, color = "black") +
+  facet_wrap(~Variable, scales = "free") + 
+  scale_y_continuous(limits = c(0, 20000), oob = scales::squish)+
+  theme_minimal() +
+  labs(title = "Distribution of Economical Variables ", x = "Value", y = "Frequency")+
+  theme(legend.position = "bottom",
+    legend.text = element_text(size = 8),
+    legend.title = element_text(size = 9, face = "bold"),
+    legend.key.size = unit(0.4, "cm"))
+  
+```
+
+
+
+The distribution of **legal and medical transition-related variables** reflects significant variations in policy and accessibility across different aspects of gender recognition and intervention.
+
+Variables such as **self-determination (self_det), name change, and non-binary recognition (nb_recog)** indicate a higher concentration at lower values, suggesting that these aspects of gender identity recognition are not widely accessible or standardized across regions. Similarly, **medical intervention requirements (med_interven) and psychological diagnosis (psych_diag)** show a higher density at the lower end, implying that in many cases, medical or psychiatric evaluation may not be a strict prerequisite for gender recognition.
+
+On the other hand, **age restrictions (age_restrict), sterilization requirements (steril_req), and surgical intervention mandates (surg_interven)** appear less commonly enforced, as their distributions are more spread out, indicating variability in policy adoption. Additionally, **the existence of legal gender marker options (exist_lgme) and recognition of gender for minors (lgrp_minors)** suggest that while some countries have progressive measures in place, these rights are not universally accessible.
+
+Overall, the data underscores the uneven distribution of gender recognition policies, where self-identification and name change procedures are more commonly available than more restrictive requirements such as sterilization or mandatory medical interventions.
+
+### Multicolinearity
+
+#### Model 1
+
+
+
+```{r}
+# Convert to an ordered factor
+final_data$transgender_civil_dc1 <- factor(final_data$transgender_civil_dc, 
+                                          levels = c(2, 3, 1), 
+                                          labels = c("Oppose", "Don't Know", "Support"),
+                                          ordered = TRUE)
+
+
+
+final_data$ideo1 <- scale(final_data$ideo)  
+
+control_settings <- glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000))
+
+model1<- glmer(transgender_civil_dc1 ~ gender + religion1 + ideo + 
+                  (1 | iso3c), 
+                data = final_data, 
+                family = binomial, 
+                control = control_settings)
+
+
+model1
+
+```
+
+
+
+The results of the generalized linear mixed model (GLMM) provide key insights into the factors influencing support for transgender rights while accounting for country-level variations. The model was estimated using a binomial logistic regression approach, with gender, religion, and ideology as fixed effects, and country-level variations modeled as random intercepts.
+
+The model fit statistics indicate a reasonable fit to the data, with an AIC of 27842.54 and a BIC of 27996.01. The log-likelihood value (-13902.27) and deviance (27804.54) further confirm the model's adequacy. The random intercept variance (0.7912) suggests substantial cross-country variation in support for transgender rights, indicating that country-level factors play a significant role in shaping attitudes.
+
+Among the fixed effects, **gender** emerges as a significant predictor of support, with women being more likely to support transgender rights than men (β = 0.4012). **Religious affiliation** also plays a crucial role: Orthodox Christians (-0.127), Sunni Muslims (-0.048), and Shia Muslims (-0.130) show lower support compared to other religious groups, whereas **Atheists (0.554) and Agnostics (0.430) display higher levels of support.** Protestant Christians (0.133) and Buddhists (0.091) exhibit moderate support, while Hindus (-0.434) demonstrate a lower likelihood of endorsing transgender rights. These results indicate that **more secular individuals are more supportive of transgender rights, whereas traditionally religious groups tend to be less supportive.**
+
+**Ideology (β = 0.0411) positively correlates with support for transgender rights**, meaning that as individuals become more progressive or left-leaning, their likelihood of supporting transgender rights increases. However, the effect size is relatively small, suggesting that while ideology matters, it is not a primary determinant.
+
+Overall, the findings indicate that **gender, religion, and ideology significantly shape attitudes toward transgender rights, with notable cross-country differences.** Women and secular individuals are more likely to support transgender rights, while religious conservatism is associated with lower support. The presence of substantial **country-level variation suggests that national context and cultural factors should be further explored in future research.** Future models could benefit from incorporating additional individual-level variables such as age, education, and socioeconomic status, as well as exploring interactions between religion, ideology, and country-specific characteristics.
+
+
+
+```{r}
+plot_model(model1, type = "est", show.values = TRUE, title = "Effect of Variables on Support for Transgender Rights")
+
+```
+
+
+
+This visualisation provides a clearer picture of what influences support for transgender rights. **Women (OR = 1.49, p \< 0.001)** are significantly more likely to be supportive compared to men, reinforcing the idea that gender plays a key role in shaping attitudes.
+
+Religious beliefs also make a big difference. **Atheists (OR = 1.74, p \< 0.001) and non-believers/agnostics (OR = 1.54, p \< 0.001)** are much more likely to support transgender rights, while **Hindus (OR = 0.65) and Sikhs (OR = 0.49)** show lower support. Other religious groups, such as Orthodox Christians, Protestants, and Muslims, show more mixed results, meaning their views vary within their communities.
+
+**Political ideology (OR = 1.04, p \< 0.01)** also plays a role—people with more progressive views tend to be more supportive, though the effect is smaller compared to gender and religion.
+
+Overall, this model highlights that **gender and secular beliefs are strong predictors of support, while religious affiliation and ideology also shape opinions in meaningful ways.** There’s still variation across groups, showing how complex attitudes toward transgender rights can be depending on social and cultural backgrounds.
+
+##### VIF
+
+
+
+```{r}
+vif_values <- vif(model1)  # Calculate VIF for each predictor
+print(vif_values)  # Display results
+
+```
+
+
+
+The **GVIF values** indicate that multicollinearity is not a concern in this model, as all values are close to 1. This suggests that gender, religion, and ideology do not exhibit a strong linear relationship with one another, minimizing the risk of multicollinearity affecting the model’s estimates.
+
+However, the **residuals vs. fitted values plot** displays a noticeable curvature rather than a random distribution, indicating a potential issue with model specification. Ideally, residuals should be randomly dispersed around zero, but the observed pattern suggests that the assumptions of **homoscedasticity and linearity** may not be met. This issue could be addressed by considering alternative model specifications, such as a **probit model** instead of a logit model, or by incorporating **interaction terms** to account for potential non-linear relationships.
+
+#### Model 2
+
+
+
+```{r}
+# Model with a quadratic term for gender
+final_data$gender_squared <- final_data$gender^2
+
+model2 <- glmer(transgender_civil_dc1 ~ gender + gender_squared + religion1 + ideo1 + (1 | iso3c),
+                data = final_data,
+                family = binomial,
+                control = glmerControl(optimizer = "bobyqa"))
+
+# Summary of the model
+summary(model2, correlation = TRUE)
+
+# Get covariance matrix for the fixed effects coefficients
+vcov(model2)
+```
+
+
+
+The results from the ordered logistic regression model show that **gender**, **religion**, and **ideology** are significant predictors of support for transgender rights.
+
+First, **gender** has a small positive effect on transgender rights support, with a coefficient of **0.000875**. This suggests that women are slightly more likely to support transgender rights compared to men, although the effect size is relatively small, indicating that gender alone may not be a strong predictor.
+
+**Religion** plays a larger role in shaping attitudes toward transgender rights. **Atheists (0.004328)** and **Non-believers/Agnostics (0.003025)** show a strong positive effect, indicating that individuals who identify as non-religious are significantly more likely to support transgender rights compared to religious groups. In contrast, **Orthodox Christians (-0.001287)**, **Muslim-Sunni (-0.001074)**, and **Muslim-Shia (-0.000937)** show negative coefficients, suggesting that these religious groups tend to have lower support for transgender rights. Interestingly, **Protestants (0.005205)** and **Other Christians (0.006760)** exhibit a positive relationship with support, meaning that Christians, particularly Protestants, are more likely to express support for transgender rights compared to Orthodox Christians.
+
+The **ideology** variable shows a small positive effect (**0.0000255**), suggesting that more progressive ideologies are associated with increased support for transgender rights. However, the effect is quite small, meaning that political ideology has a relatively minor influence on support compared to gender and religion.
+
+The **interaction terms** reveal that **gender and religion together** significantly influence attitudes toward transgender rights. For example, **women in Orthodox Christian communities (0.001966)** and **Sikh communities (0.007354)** show a higher likelihood of supporting transgender rights compared to their male counterparts. On the other hand, **Muslim-Sunni women (0.003874)** also show a higher likelihood of support than men in the same group, although the effect is less pronounced than in Orthodox Christian and Sikh communities.
+
+Finally, the **random effects** for country-level variability (**0.7931**) indicate that there is moderate variation across countries in support for transgender rights. Some countries show significantly higher levels of support, while others exhibit lower support. This underscores the importance of considering country-specific factors when examining attitudes toward transgender rights.
+
+In conclusion, **gender** and **religion** are strong predictors of support for transgender rights, with **atheists and non-religious individuals** showing the highest support. The **interaction between gender and religion** further refines this relationship, showing that women in certain religious groups, such as **Sikh** and **Orthodox Christian** communities, are more likely to support transgender rights. Political ideology plays a smaller role, but still has a positive effect. The model also highlights significant **country-level variations**, suggesting that national context is crucial in shaping individual attitudes toward transgender rights.
+
+##### **Comparison Between Model 1 and Model 2**
+
+The second model provided a clearer and more nuanced understanding of how gender and religion work together to shape attitudes toward transgender rights. The interaction terms allowed for a deeper analysis of how support for transgender rights differs not just by gender or religion alone, but by their intersection. This approach brought additional complexity and depth to the model, which helped uncover patterns that were not apparent in the first model.
+
+Given that the second model did not significantly improve the AIC, BIC, or other fit statistics compared to the first model, it seems that adding interaction terms does not necessarily enhance the model’s ability to explain support for transgender rights. Therefore, it may be more practical to proceed with the first model, as it offers valuable insights while being simpler and more interpretable.
+
+#### Model Cross-Validation
+
+
+
+```{r}
+model_multinomial <- multinom(transgender_civil_dc1 ~ gender + religion1 + ideo1,
+                              data = final_data)
+
+summary(model_multinomial)
+
+```
+
+
+
+The multinomial logistic regression model analyzed the factors influencing support for transgender rights, categorized into Oppose, Don't Know, and Support. Gender significantly affected support, with women more likely to either support or be uncertain about transgender rights compared to men.
+
+Religion played a major role, with atheists and non-believers showing more support than Orthodox Christians and Muslims. Protestants and Other Christians exhibited moderate support, while Sikh individuals showed significantly lower support.
+
+Ideology showed a positive association with uncertainty about transgender rights but a negative relationship with direct support, suggesting more progressive ideologies lead to more uncertainty rather than support.
+
+The interaction terms revealed that the relationship between gender and religion influences support in specific ways. For example, women in Orthodox Christian and Sikh communities showed differing levels of support compared to men in the same communities.
+
+In conclusion, gender and religion are the main predictors of support for transgender rights, with secular individuals showing stronger support. Ideology also matters but in a more complex way, contributing to uncertainty rather than clear support.
+
+
+
+```{r}
+# Define training control for cross-validation (10-fold cross-validation)
+train_control <- trainControl(method = "cv", number = 10)
+
+# Train the model using multinomial logistic regression with cross-validation
+cv_model <- train(transgender_civil_dc1 ~ gender + religion1 + ideo1,
+                  data = final_data,
+                  method = "multinom",  # Multinomial logistic regression
+                  trControl = train_control)
+
+# Check cross-validation results
+print(cv_model)
+```
+
+```{r}
+# Confusion matrix for the cross-validation model
+confusionMatrix(cv_model)
+```
+
+
+
+#### Model 3 - Adding Country Level
+
+
+
+```{r}
+model_eco <- lm(transgender_civil_dc ~ gdp+ edu_exp_pct +preprim_exp + prim_exp +  lose_exp +upse_exp+  ter_exp+ voc_exp,
+                    data = final_data)
+
+
+print(model_eco)
+
+```
+
+
+
+In this analysis, a linear regression model was used to examine the relationship between support for transgender rights (dependent variable) and various economic factors (such as GDP, education expenditures, etc.). In the model, the transgender_civil_dc variable measures support for transgender rights, while the independent variables include various levels of education spending and economic indicators.
+
+The results show that GDP has a negligible effect on support, almost zero, while the impact of education expenditures is more mixed. Primary and tertiary education expenditures were positively related to support, whereas pre-primary and secondary education expenditures showed a slight negative effect. Additionally, vocational education spending had a small positive impact, though minimal.
+
+This model shows that economic factors alone don’t explain much about transgender rights support, as their effects are small and inconsistent. Gender and religion may play a more prominent role, so these factors should be explored further.
+
+#### Model 4
+
+
+
+```{r}
+final_data_scaled <- final_data %>%
+  mutate(across(c(gdp, edu_exp_pct, preprim_exp, prim_exp, lose_exp, upse_exp, ter_exp, voc_exp), scale))
+
+
+# Fit the model again
+model4<- glmer(transgender_civil_dc1 ~ gender + religion1 + ideo1 + gdp + edu_exp_pct + 
+                    preprim_exp + prim_exp + lose_exp + upse_exp + ter_exp + voc_exp + (1 | iso3c),
+                    data = final_data_scaled, family = binomial, 
+                    control = glmerControl(optimizer = "bobyqa"))
+
+
+# Summary of the model
+summary(model4, correlation = TRUE)
+
+```
+
+
+
+#### Correlation Analysis
+
+
+
+```{r}
+# Correcting the select() function by adding quotes around each variable name
+cor_data <- final_data %>%
+  dplyr::select("gender", "religion", "ideo", "gdp", "edu_exp_pct", "preprim_exp", "prim_exp", "lose_exp", 
+         "upse_exp", "ter_exp", "voc_exp", "psychological.care", "psychiatric.care", "nolger", 
+         "exist_lgme", "exist_adm", "name_change", "self_det")
+
+# Compute the correlation matrix
+cor_matrix <- cor(cor_data, use = "complete.obs")
+
+# View the correlation matrix
+print(cor_matrix)
+
+
+corrplot(cor_matrix)
+```
+
+
+
+The correlation analysis shows some strong relationships between certain variables. For instance, there is a high correlation between lose_exp, upse_exp, and ter_exp, indicating that these variables measure similar aspects. To avoid multicollinearity, it would be advisable to remove one of these variables from the model.
+
+Similarly, psychological.care and psychiatric.care are perfectly correlated with each other, suggesting that only one of them should remain in the model. Removing the redundant variable will simplify the model without losing meaningful information.
+
+There are also moderate positive correlations between GDP and variables like lose_exp and voc_exp, meaning wealthier countries tend to spend more on education and vocational training. On the other hand, gender and religion show weak correlations with economic and educational variables, implying that these factors have less impact on these areas.
+
+### Final data
+
+
+
+```{r}
+final_data$sec_exp <- final_data$lose_exp + final_data$upse_exp
+final_data$prim_exp <- final_data$preprim_exp + final_data$prim_exp
+
+final_data <- final_data %>%
+  dplyr::select(-psychiatric.care)
+
+head(final_data)
+
+```
+
+
+
+------------------------------------------------------------------------
+
+## Statistical Model
+
+
+
+```{r}
+
+```
+
+
+
+INDIVIDUAL LEVEL
+
+**Gender** \## EVERYTHING FROM UNTIL OTHERWISE INDICATED CAN BE EDITED TO FIT OUR VARIABLE \##
+
+
+
+```{r}
+
+
+```
+
+
+
+**Age**
+
+
+
+```{r}
+
+```
+
+
+
+**Political_ideology**
+
+*In political matters people talk of "the left" and "the right". How would you place your views on this scale?*
+
+
+
+```{r}
+
+```
+
+
+
+**Religion_cat**
+
+*Do you consider yourself to be…?*
+
+
+
+```{r}
+
+
+```
+
+
+
+**Contact with transgender people (sd1_7)**
+
+*Do you have friends or acquaintances who are transgender?*
+
+
+
+```{r}
+
+
+```
+
+
+
+**Age when completing full-time education (d8)**
+
+*How old were you when you stopped full‐time education?*
+
+
+
+```{r}
+
+
+```
+
+
+
+**Personal economic situation (d60_ordinal)**
+
+*During the last twelve months, would you say you had difficulties to pay your bills at the end of the month…?*
+
+
+
+```{r}
+
+```
+
+
+
+**Sexual minority(sd2_5)**
+
+*Where you live, do you consider yourself to be part of a sexual minority?*
+
+
+
+```{r}
+
+
+```
+
+
+
+**Place of residence (type) (d25)**
+
+*Would you say you live in a...?*
+
+
+
+```{r}
+
+```
+
+
+
+**Equal rights for the LGB community (qc15_1_ordinal)**
+
+
+
+```{r}
+
+
+```
+
+
+
+**Discrimination against the transgender community (qc1_8_ordinal)**
+
+
+
+```{r}
+
+
+```
+
+
+
+COUNTRY LEVEL
+
+**Variables created earlier country level.**
+
+
+
+```{r}
+
+
+```
+
+
+
+**adp_general**
+
+
+
+```{r}
+
+
+```
+
+
+
+**Country_name** \## END OF VARIABLE EDITS \##
+
+
+
+```{r}
+
+
+```
+
+
+
+DATA FINAL COUNTRY
+
+
+
+```{r}
+
+```
+
+
+
+DATA FINAL INDIVIDUAL
+
+### Regression Analysis Individual Level
+
+
+
+```{r}
+
+```
+
+
+
+### Multi-level analysis
+
+
+
+```{r}
+
+```
+
+
+
+### Conclusion
+
+## PREDICTION
+
+Our goal is to develop a model capable of predicting support for transgender individuals changing civil documents. To accurately forecast our target variable, we must first establish a clear definition of the outcome we aim to predict.
+
+### Models to Follow
+
+
+
+```{r}
+
+```
+
+
+
+## References
+
