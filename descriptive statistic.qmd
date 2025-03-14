@@ -49,7 +49,8 @@ In this analysis, we examined the missing data patterns in my dataset to assess 
 final_data <- as.data.frame(final_data)
 
 # only variables with missing data for imputation
-impute_vars <- final_data %>% select(`preprim_exp`, `prim_exp`, `lose_exp`, `upse_exp`, `voc_exp`)
+impute_vars <- final_data %>% 
+  dplyr::select(`preprim_exp`, `prim_exp`, `lose_exp`, `upse_exp`, `voc_exp`)
 
 
 # Generate a predictor matrix
@@ -109,7 +110,7 @@ library(viridis)
 
 #  only individual-level variables
 individual_vars <- final_data %>%
-  select(gender, age_edu_5cat, age_edu_11cat, polintr, natvoice, euvoice, relig, 
+ dplyr:: select(gender, age_edu_5cat, age_edu_11cat, polintr, natvoice, euvoice, relig, 
          roma, skin, sexdiscr, transdiscr, school_div_transgender, 
          school_div_sexual_orientation, school_div_intersex, transgender_civil_dc)
 
@@ -202,7 +203,7 @@ other_plot <- create_improved_histogram(improved_data, "Other Variables")
 # Function for Bar Chart
 create_bar_chart <- function(data, variable_name) {
   var_data <- individual_vars %>%
-    select(all_of(variable_name)) %>%
+    dplyr::select(all_of(variable_name)) %>%
     rename(Value = all_of(variable_name)) %>%
     group_by(Value) %>%
     summarize(Count = n()) %>%
@@ -380,6 +381,55 @@ ggplot(religion_counts, aes(x = reorder(religion1, Count), y = Percentage, fill 
 ```
 
 The distribution of religious denominations shows that Catholicism is the most dominant religion, followed by Orthodox Christianity and Protestantism, while Non-believers/Agnostics and Atheists also represent a significant portion, indicating a strong secular trend. Muslim groups, including Sunni, Shia, and Other Muslim, are relatively small, suggesting they are a minority in the surveyed population. Other religions, such as Buddhism, Judaism, Hinduism, and Sikhism, have minimal representation. Additionally, a small percentage of respondents either refused to disclose their religious affiliation or selected “Don’t Know,” highlighting potential reluctance or uncertainty regarding religious identity. The data overall reflects a predominantly Christian population with notable secular tendencies and limited religious diversity.
+
+
+
+```{r}
+final_data$iso3c1 <-as.numeric(final_data$iso3c)
+
+western_europe <- c("BEL", "DNK", "GRC", "ESP", "FIN", "FRA", "IRL", "ITA", "LUX", "NLD", "AUT", "PRT", "SWE")
+eastern_europe <- c("BGR", "CYP", "CZE", "EST", "HUN", "LVA", "LTU", "MLT", "POL", "ROU", "SVN", "HRV")
+
+west_data <- final_data[final_data$iso3c %in% western_europe, ]
+east_data <- final_data[final_data$iso3c %in% eastern_europe, ]
+
+
+mean_west <- mean(west_data$transgender_civil_dc)
+mean_east <- mean(east_data$transgender_civil_dc)
+
+cat("Average Support in Western Europe: ", mean_west, "\n")
+cat("Average Support in Eastern Europe: ", mean_east, "\n")
+
+```
+
+```{r}
+final_data$region <- ifelse(final_data$iso3c %in% western_europe, "Western Europe", 
+                            ifelse(final_data$iso3c %in% eastern_europe, "Eastern Europe", NA))
+
+# Calculate the support percentage by region (Western vs. Eastern Europe)
+region_support <- final_data %>%
+  group_by(region) %>%
+  summarise(support_percentage = mean(transgender_civil_dc == 1, na.rm = TRUE) * 100)
+
+# View the support percentage by region
+print(region_support)
+
+# Bar plot for support percentage by region
+ggplot(region_support, aes(x = region, y = support_percentage, fill = region)) +
+  geom_bar(stat = "identity", show.legend = FALSE) +
+  labs(title = "Support for Transgender Rights by Region", 
+       x = "Region", 
+       y = "Support Percentage (%)") +
+  scale_fill_manual(values = c("blue", "red")) +
+  theme_minimal()
+
+```
+
+
+
+
+
+
 
 
 ```{r}
@@ -824,7 +874,86 @@ print(cv_model)
 confusionMatrix(cv_model)
 
 ```
+
+
+
+**Adding Country Level**
+
+
 ```{r}
+
+
+model_eco <- lm(transgender_civil_dc ~ gdp+ edu_exp_pct +preprim_exp + prim_exp +  lose_exp +upse_exp+  ter_exp+ voc_exp,
+                    data = final_data)
+
+
+print(model_eco)
+
+
+```
+In this analysis, a linear regression model was used to examine the relationship between support for transgender rights (dependent variable) and various economic factors (such as GDP, education expenditures, etc.). In the model, the transgender_civil_dc variable measures support for transgender rights, while the independent variables include various levels of education spending and economic indicators.
+
+The results show that GDP has a negligible effect on support, almost zero, while the impact of education expenditures is more mixed. Primary and tertiary education expenditures were positively related to support, whereas pre-primary and secondary education expenditures showed a slight negative effect. Additionally, vocational education spending had a small positive impact, though minimal.
+
+This model shows that economic factors alone don’t explain much about transgender rights support, as their effects are small and inconsistent. Gender and religion may play a more prominent role, so these factors should be explored further.
+
+
+```{r}
+final_data_scaled <- final_data %>%
+  mutate(across(c(gdp, edu_exp_pct, preprim_exp, prim_exp, lose_exp, upse_exp, ter_exp, voc_exp), scale))
+
+
+# Fit the model again
+model4<- glmer(transgender_civil_dc1 ~ gender + religion1 + ideo1 + gdp + edu_exp_pct + 
+                    preprim_exp + prim_exp + lose_exp + upse_exp + ter_exp + voc_exp + (1 | iso3c),
+                    data = final_data_scaled, family = binomial, 
+                    control = glmerControl(optimizer = "bobyqa"))
+
+
+# Summary of the model
+summary(model4, correlation = TRUE)
+
+```
+
+
+
+
+```{r}
+
+# Correcting the select() function by adding quotes around each variable name
+cor_data <- final_data %>%
+  dplyr::select("gender", "religion", "ideo", "gdp", "edu_exp_pct", "preprim_exp", "prim_exp", "lose_exp", 
+         "upse_exp", "ter_exp", "voc_exp", "psychological.care", "psychiatric.care", "nolger", 
+         "exist_lgme", "exist_adm", "name_change", "self_det")
+
+# Compute the correlation matrix
+cor_matrix <- cor(cor_data, use = "complete.obs")
+
+# View the correlation matrix
+print(cor_matrix)
+
+library(corrplot)
+
+corrplot(cor_matrix)
+
+```
+
+The correlation analysis shows some strong relationships between certain variables. For instance, there is a high correlation between lose_exp, upse_exp, and ter_exp, indicating that these variables measure similar aspects. To avoid multicollinearity, it would be advisable to remove one of these variables from the model.
+
+Similarly, psychological.care and psychiatric.care are perfectly correlated with each other, suggesting that only one of them should remain in the model. Removing the redundant variable will simplify the model without losing meaningful information.
+
+There are also moderate positive correlations between GDP and variables like lose_exp and voc_exp, meaning wealthier countries tend to spend more on education and vocational training. On the other hand, gender and religion show weak correlations with economic and educational variables, implying that these factors have less impact on these areas.
+
+
+
+```{r}
+final_data$sec_exp <- final_data$lose_exp + final_data$upse_exp
+final_data$prim_exp <- final_data$preprim_exp + final_data$prim_exp
+
+final_data <- final_data %>%
+  dplyr::select(-psychiatric.care)
+
+head(final_data)
 
 ```
 
