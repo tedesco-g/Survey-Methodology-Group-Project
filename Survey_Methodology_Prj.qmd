@@ -673,77 +673,6 @@ cat("Average Support in Eastern Europe: ", mean_east, "\n")
 ```
 
 ```{r}
-
-education_levels <- final_data %>%
-  mutate(ISCED_Level = case_when(
-    age_edu == 00 ~ "Still Studying",  # Separate category
-    age_edu == 01 ~ "No Formal Education",  # No formal schooling
-    age_edu == 98 | age_edu == 99 ~ "Refused / Don't Know",  # Separate category
-    age_edu < 5  ~ "Pre-primary",
-    age_edu >= 5 & age_edu <= 10  ~ "Primary",
-    age_edu >= 11 & age_edu <= 14  ~ "Lower Secondary",
-    age_edu >= 15 & age_edu <= 18  ~ "Upper Secondary",
-    age_edu >= 16 & age_edu <= 19  ~ "Vocational",
-    age_edu >= 19  ~ "Tertiary",
-    TRUE ~ NA_character_
-  ))
-
-
-
-
-
-
-education_summary <- education_levels %>%
-  group_by(country, ISCED_Level) %>%
-  summarise(Count = n(), .groups = "drop") %>%
-  arrange(country, desc(Count))
-
-
-
-
-
-education_spending_summary <- education_summary %>%
-  left_join(final_data %>%
-              group_by(country) %>%
-              summarise(
-                Primary_Spending = mean(prim_exp, na.rm = TRUE),
-                Lower_Secondary_Spending = mean(lose_exp, na.rm = TRUE),
-                Upper_Secondary_Spending = mean(upse_exp, na.rm = TRUE),
-                Vocational_Spending = mean(voc_exp, na.rm = TRUE),
-                Tertiary_Spending = mean(ter_exp, na.rm = TRUE)
-              ), by = "country")  
-
-
-hchart(education_summary, "column", 
-       hcaes(x = country, y = Count, group = ISCED_Level)) %>%
-  hc_chart(
-    type = "column",
-    backgroundColor = list(
-      linearGradient = list(x1 = 0, y1 = 0, x2 = 0, y2 = 1),
-      stops = list(
-        list(0, 'white'),    
-        list(1, 'white')     
-      )
-    )
-  ) %>%
-  hc_plotOptions(column = list(stacking = "normal")) %>%  # Enable stacking
-  hc_title(text = "Highest Education Level Reached Per Country (Stacked)", 
-           style = list(color = "black", fontSize = "20px")) %>%
-  hc_xAxis(title = list(text = "Country", style = list(color = "black")), 
-           labels = list(style = list(color = "black"), rotation = -45)) %>%
-  hc_yAxis(title = list(text = "Number of Respondents", style = list(color = "black")), 
-           labels = list(style = list(color = "black"))) %>%
-  hc_colors(c("#1E90FF", "#FFD700", "#FF4500", "#8B0000", "#00FA9A", "#8A2BE2")) %>%  # Medium Purple
-  hc_tooltip(useHTML = TRUE, 
-             pointFormat = "<b>{point.country}</b><br>
-                           Education Level: {point.ISCED_Level}<br>
-                           Respondents: {point.y}")
-
-
-
-```
-
-```{r}
 final_data$region <- ifelse(final_data$iso3c %in% western_europe, "Western Europe", 
                             ifelse(final_data$iso3c %in% eastern_europe, "Eastern Europe", NA))
 
@@ -771,6 +700,66 @@ summary(final_data)
 
 table(final_data$transgender_civil_dc)
 prop.table(table(final_data$transgender_civil_dc)) * 100 
+```
+
+#### gina's graph
+
+```{r}
+education_levels <- final_data %>%
+  mutate(ISCED_Level = case_when(
+    age_edu == 00 ~ "Still Studying",  # Separate category
+    age_edu == 01 ~ "No Formal Education",  # No formal schooling
+    age_edu == 98 | age_edu == 99 ~ "Refused / Don't Know",  # Separate category
+    age_edu < 5  ~ "Pre-primary",
+    age_edu >= 5 & age_edu <= 10  ~ "Primary",
+    age_edu >= 11 & age_edu <= 14  ~ "Lower Secondary",
+    age_edu >= 15 & age_edu <= 18  ~ "Upper Secondary",
+    age_edu >= 16 & age_edu <= 19  ~ "Vocational",
+    age_edu >= 19  ~ "Tertiary",
+    TRUE ~ NA_character_
+  ))
+
+education_summary <- education_levels %>%
+  group_by(country, ISCED_Level) %>%
+  summarise(Count = n(), .groups = "drop") %>%
+  arrange(country, desc(Count))
+
+education_spending_summary <- education_summary %>%
+  left_join(final_data %>%
+              group_by(country) %>%
+              summarise(
+                Primary_Spending = mean(prim_exp, na.rm = TRUE),
+                Lower_Secondary_Spending = mean(lose_exp, na.rm = TRUE),
+                Upper_Secondary_Spending = mean(upse_exp, na.rm = TRUE),
+                Vocational_Spending = mean(voc_exp, na.rm = TRUE),
+                Tertiary_Spending = mean(ter_exp, na.rm = TRUE)
+              ), by = "country")  
+
+hchart(education_summary, "column", 
+       hcaes(x = country, y = Count, group = ISCED_Level)) %>%
+  hc_chart(
+    type = "column",
+    backgroundColor = list(
+      linearGradient = list(x1 = 0, y1 = 0, x2 = 0, y2 = 1),
+      stops = list(
+        list(0, 'white'),    
+        list(1, 'white')     
+      )
+    )
+  ) %>%
+  hc_plotOptions(column = list(stacking = "normal")) %>%  # Enable stacking
+  hc_title(text = "Highest Education Level Reached Per Country (Stacked)", 
+           style = list(color = "black", fontSize = "20px")) %>%
+  hc_xAxis(title = list(text = "Country", style = list(color = "black")), 
+           labels = list(style = list(color = "black"), rotation = -45)) %>%
+  hc_yAxis(title = list(text = "Number of Respondents", style = list(color = "black")), 
+           labels = list(style = list(color = "black"))) %>%
+  hc_colors(c("#1E90FF", "#FFD700", "#FF4500", "#8B0000", "#00FA9A", "#8A2BE2")) %>%  # Medium Purple
+  hc_tooltip(useHTML = TRUE, 
+             pointFormat = "<b>{point.country}</b><br>
+                           Education Level: {point.ISCED_Level}<br>
+                           Respondents: {point.y}")
+
 ```
 
 #### Distribution of responses to Question 19…
