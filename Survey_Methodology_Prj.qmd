@@ -984,7 +984,11 @@ Overall, the distributions illustrate a global trend of strong financial commitm
 
 #### GDP vs. Education Expenditure
 
-here…
+We wanted to analyze the relationship between GDP and total education spending across European countries. The dataset was first prepared by removing missing values and transforming GDP into trillions of USD. Education expenditure was computed as a percentage of GDP and converted into billions of USD. A categorical variable (“Spending_Category”) was created to classify spending into four levels: Low (\<20B), Medium (20B-50B), High (50B-100B), and Very High (\>100B).
+
+We decided to visualize it as a bubble chart, where each point represents a country. The x-axis shows GDP (in trillions USD), while the y-axis displays total education spending (in billions USD). The size of each bubble corresponds to the amount spent on education, and colors indicate spending categories: blue for low, gold for medium, orange for high, and dark red for very high.
+
+The chart was customized with an interactive tooltips displaying detailed country-level information, including the percentage of GDP allocated to education.
 
 ```{r}
 # Prepare data
@@ -1047,6 +1051,10 @@ hchart(data_2019, "bubble", hcaes(x = GDP_trillions, y = Spending_Billions,
              }"))
 
 ```
+
+The bubble chart confirms a clear positive correlation between GDP and education spending: countries with higher GDP tend to allocate more absolute funds to education. However, the proportion of GDP spent on education varies, with some lower-GDP countries dedicating a relatively high percentage. The majority of education spending is concentrated among wealthier nations, as indicated by the clustering of large red bubbles in the upper right quadrant. Lower-GDP countries (blue bubbles) have significantly lower absolute education budgets, likely due to economic constraints.
+
+The variation in spending on education suggests differing national priorities, with some high-GDP nations allocating more funding than others. This highlights economic disparities and policy choices in education investment across Europe.
 
 #### Health Variables
 
