@@ -1,0 +1,28 @@
+---
+title: "Codebook Report"
+author: "Survey Methodology Group"
+date: "2025-03-14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(codebook)
+library(haven)
+library(webshot)
+library(rmarkdown)
+library(readr)
+
+```
+
+
+```{r}
+
+
+final_data <-read_csv("data_cleaning_files/final_data.csv")
+codebook(final_data)
+```
+
+
+
+
