@@ -753,12 +753,17 @@ hchart(education_summary, "column",
   hc_xAxis(title = list(text = "Country", style = list(color = "black")), 
            labels = list(style = list(color = "black"), rotation = -45)) %>%
   hc_yAxis(title = list(text = "Number of Respondents", style = list(color = "black")), 
-           labels = list(style = list(color = "black"))) %>%
-  hc_colors(c("#1E90FF", "#FFD700", "#FF4500", "#8B0000", "#00FA9A", "#8A2BE2")) %>%  # Medium Purple
+           labels = list(style = list(color = "black")),
+           max = 1050,
+            tickInterval = 150) %>%
+ hc_colors(c("#3498db", "#f39c12", "#e74c3c", "#9b59b6", "#2ecc71", "#34495e", "#1abc9c", "#d35400")) %>% 
+   hc_legend(reversed = TRUE)%>%
   hc_tooltip(useHTML = TRUE, 
              pointFormat = "<b>{point.country}</b><br>
                            Education Level: {point.ISCED_Level}<br>
                            Respondents: {point.y}")
+
+
 
 ```
 
