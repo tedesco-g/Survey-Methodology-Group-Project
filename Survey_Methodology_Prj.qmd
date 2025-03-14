@@ -701,7 +701,6 @@ ggplot(region_support, aes(x = region, y = support_percentage, fill = region)) +
 ```
 
 ```{r}
-
 # Define country codes and sample values
 country_codes <- data.frame(
   country = c("Belgium", "Denmark", "Greece", "Spain", "Finland", "France", "Ireland", "Italy",
@@ -714,19 +713,13 @@ country_codes <- data.frame(
 )
 
 
-
-
-
 percentage <- final_data %>%
   group_by(iso3c) |>
   count(transgender_civil_dc) %>%  # Count occurrences of each unique value
   mutate(percentage = (n / sum(n)) * 100) 
 
-
 percentage <- percentage%>%
   left_join(country_codes, by = "iso3c")
-
-
 
 # Aggregate data and handle missing values
 aggregated_data <- percentage %>%
@@ -743,9 +736,6 @@ aggregated_data <- percentage %>%
     dominant_dc = transgender_civil_dc[which.max(percentage)] # Get dominant category
   ) %>%
   ungroup()
-
-
-
 
 
 hcmap("custom/europe", 
