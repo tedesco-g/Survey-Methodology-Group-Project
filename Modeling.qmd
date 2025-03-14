@@ -1,0 +1,486 @@
+---
+title: "WerQing"
+format: html
+editor: visual
+---
+
+# Libraries
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(caret)
+library(rpart)        # Decision Tree
+library(randomForest) # Random Forest
+library(class)        # KNN
+library(pROC)         # For AUC-ROC evaluation
+library(nnet)         # For Multinomial Logistic Regression
+library(xgboost)      # For XGBoost
+library(gbm)          # For Gradient Boosting
+library(MLmetrics)
+library(smotefamily)
+library(fastDummies)
+```
+
+# Data Preparation
+
+```{r}
+
+# Start with the original dataset
+model_data <- final_data[, names(final_data) != "iso3c1"]
+
+# Check for missing values
+print("NAs after removing iso3c1:")
+print(sum(is.na(model_data)))
+
+# Convert target variable to factor
+model_data$transgender_civil_dc <- factor(
+  model_data$transgender_civil_dc,
+  levels = c(1, 2, 3),
+  labels = c("Yes", "No", "DontKnow")
+)
+
+print("Target variable distribution:")
+print(table(model_data$transgender_civil_dc))
+
+# Define feature types
+categorical_vars <- c("country", "gender", "religion", "iso3c", "class", 
+                      "ethnic", "skin", "relig", "roma", "sex", "disab", "other")
+
+ordinal_vars <- c("lifesat", "natmat", "eumat", "locmat", "euvoice", "natvoice", 
+                  "sexdiscr", "transdiscr", "interdiscr", "age_edu_5cat", "age_edu_11cat",
+                  "school_div_transgender", "school_div_sexual_orientation", "school_div_intersex",
+                  "polintr", "community", "ideo")
+
+binary_vars <- c("exist_adm", "name_change", "psych_diag", "med_interven", "surg_interven", 
+                 "nolger", "exist_lgme", "nar_name_change", "self_det", "nb_recog", "steril_req", 
+                 "div_req", "age_restrict", "lgrp_minors", "depath")  
+
+continuous_vars <- c("gdp", "edu_exp_pct", "preprim_exp", "prim_exp", "sec_exp", 
+                     "ter_exp", "voc_exp", "age_edu")  
+
+healthcare_vars <- c("psychological.care", "psychiatric.care", "breast.augmentation", 
+                     "electrolysis...laser.hair.removal", "facial.feminisation.surgery", 
+                     "hrt..oestrogen.", "hrt..testosterone.", "hysterectomy", "mastectomy", 
+                     "metoidioplasty", "orchiectomy", "ovariectomy..aka.oopherectomy.", 
+                     "phalloplasty", "tracheal.shave", "vaginoplasty", "vocal.training")
+
+# Convert categorical variables to factors
+for(var in intersect(categorical_vars, names(model_data))) {
+  model_data[[var]] <- as.factor(model_data[[var]])
+}
+
+# Convert ordinal variables to ordered factors
+for(var in intersect(ordinal_vars, names(model_data))) {
+  model_data[[var]] <- factor(model_data[[var]], ordered = TRUE)
+}
+
+# Convert binary variables to factors
+for(var in intersect(binary_vars, names(model_data))) {
+  model_data[[var]] <- as.factor(model_data[[var]])
+}
+
+# Convert healthcare variables to factors
+for(var in intersect(healthcare_vars, names(model_data))) {
+  if(var %in% names(model_data)) {
+    model_data[[var]] <- factor(model_data[[var]], 
+                               levels = c(1, 2, 3), 
+                               labels = c("Yes", "No", "Not Enough Info"))
+  }
+}
+
+# Remove single-level factors to prevent errors
+single_level_factors <- names(model_data)[sapply(model_data, function(x) is.factor(x) && length(unique(x)) == 1)]
+
+if (length(single_level_factors) > 0) {
+  print("Removing single-level factors:")
+  print(single_level_factors)
+  model_data_clean <- model_data[, !names(model_data) %in% single_level_factors]
+} else {
+  model_data_clean <- model_data
+}
+
+print("Number of variables after removing single-level factors:")
+print(ncol(model_data_clean))
+
+# Split data before feature selection to prevent leakage
+set.seed(123)
+trainIndex <- createDataPartition(model_data_clean$transgender_civil_dc, p = 0.8, list = FALSE)
+train_data <- model_data_clean[trainIndex, ]
+test_data <- model_data_clean[-trainIndex, ]
+
+#  Extract predictors (X) and target variable (Y)
+train_x <- train_data[, !(names(train_data) %in% "transgender_civil_dc"), drop = FALSE]
+train_y <- train_data$transgender_civil_dc
+test_x <- test_data[, !(names(test_data) %in% "transgender_civil_dc"), drop = FALSE]
+test_y <- test_data$transgender_civil_dc
+
+# **Feature Selection AFTER Splitting Data** (Prevents Test Contamination)
+print("Running feature selection on training data only...")
+rf_for_selection <- randomForest(x = train_x, y = train_y, ntree = 100, importance = TRUE)
+var_importance <- importance(rf_for_selection)
+importance_df <- data.frame(
+  Feature = rownames(var_importance),
+  Importance = var_importance[, "MeanDecreaseGini"]
+)
+importance_df <- importance_df[order(-importance_df$Importance), ]
+selected_features <- as.character(head(importance_df$Feature, 20))
+
+print("Top 20 selected features:")
+print(selected_features)
+
+# Apply selected features to both train & test data
+train_x_selected <- train_x[, selected_features]
+test_x_selected <- test_x[, selected_features]
+
+# Ensure categorical levels match between train & test
+for (col in colnames(test_x_selected)) {
+  if (is.factor(test_x_selected[[col]])) {
+    levels(test_x_selected[[col]]) <- levels(train_x_selected[[col]])
+  }
+}
+
+# Verify factor consistency
+print("Train target distribution:")
+print(table(train_y))
+print("Test target distribution:")
+print(table(test_y))
+
+
+
+```
+This section begins by ensuring that missing values are identified and handled appropriately in the dataset. The target variable, transgender_civil_dc, is converted into a factor with three levels to prepare it for classification modeling. Various feature types, including categorical, ordinal, binary, and continuous variables, are defined and properly formatted, while single-level factors are removed to prevent errors. Finally, the dataset is split into training and testing sets before feature selection is performed using Random Forest importance scores, ensuring that only the most predictive features are retained for modeling.
+
+#   SMOTE
+
+```{r}
+# Convert categorical variables into numeric using one-hot encoding
+train_x_encoded <- dummy_cols(train_x_selected, remove_first_dummy = TRUE, remove_selected_columns = TRUE)
+
+# Ensure all features are numeric (Check for non-numeric columns)
+print("Checking if train_x_encoded is fully numeric:")
+print(sapply(train_x_encoded, class))  # Should output only "numeric"
+
+# Convert target variable to numeric for SMOTE
+train_y_numeric <- as.numeric(train_y) - 1  # Convert to 0-based index (0,1,2)
+
+# Apply SMOTE on the numeric training data
+smote_result <- SMOTE(
+  X = train_x_encoded,  # Use the correctly encoded dataset
+  target = train_y_numeric, 
+  K = 5,  
+  dup_size = 2  
+)
+
+#Extract the balanced dataset
+train_x_balanced <- smote_result$data[, -ncol(smote_result$data)]  # Features
+train_y_balanced <- factor(smote_result$data$class, 
+                           levels = c(0, 1, 2), 
+                           labels = levels(train_y))  # Convert back to factor
+
+# Verify class distribution AFTER SMOTE
+print("Class distribution after SMOTE:")
+print(table(train_y_balanced))
+
+# Ensure train_x_balanced is still numeric
+print("Checking if train_x_balanced is fully numeric:")
+print(sapply(train_x_balanced, class))  # Should output only "numeric"
+
+
+```
+
+This section ensures that categorical variables are transformed into a numeric format using one-hot encoding, making them compatible with machine learning algorithms. After encoding, the dataset is checked to confirm that all features are now numeric, preventing errors in later processing. The Synthetic Minority Over-sampling Technique (SMOTE) is then applied to address class imbalance by generating synthetic examples for underrepresented categories. Finally, the balanced dataset is verified to ensure that the newly created samples maintain the appropriate structure for model training.
+
+#Train Models
+
+## Random Forest
+
+```{r}
+# Load necessary libraries
+library(caret)
+
+# Ensure train_data_filtered is loaded and valid
+if (!exists("train_data_filtered")) {
+    stop("Error: train_data_filtered does not exist!")
+}
+
+# Check for missing values
+na_counts <- colSums(is.na(train_data_filtered))
+if (any(na_counts > 0)) {
+    cat("Warning: Missing values found! Fixing...\n")
+    for (col in names(train_data_filtered)) {
+        if (any(is.na(train_data_filtered[[col]]))) {
+            if (is.numeric(train_data_filtered[[col]])) {
+                train_data_filtered[[col]][is.na(train_data_filtered[[col]])] <- median(train_data_filtered[[col]], na.rm = TRUE)
+            } else {
+                train_data_filtered[[col]][is.na(train_data_filtered[[col]])] <- as.character(stats::na.omit(train_data_filtered[[col]]))[1]
+            }
+        }
+    }
+    cat("Missing values filled.\n")
+}
+
+# Ensure categorical variables are factors
+train_data_filtered$transgender_civil_dc <- as.factor(train_data_filtered$transgender_civil_dc)
+
+# Set cross-validation control
+control <- trainControl(method = "cv", number = 5, verboseIter = TRUE)
+
+# Train Random Forest model
+rf_cv <- train(
+    transgender_civil_dc ~ .,
+    data = train_data_filtered,
+    method = "rf",
+    trControl = control,
+    tuneLength = 3,
+    ntree = 100
+)
+
+# Print the model
+print(rf_cv)
+
+
+```
+
+The **Random Forest** results indicate that **mtry = 65** yielded perfect accuracy (1.000) across all folds, suggesting potential overfitting. Lower values of mtry (e.g., mtry = 2) resulted in a more realistic accuracy of 0.7633, with a kappa value of 0.564, indicating a moderately strong agreement. However, since the final model selected mtry = 65, this suggests that the model may be overfitting to the training data, capturing too much detail and reducing generalizability to new, unseen data.
+
+## Multinomial Logistic Regression
+
+```{r}
+print("Training Multinomial Logistic Regression with basic features...")
+
+# Create a very simple feature set with minimal risk of leakage
+basic_features <- c(
+  "school_div_transgender.L", 
+  "school_div_sexual_orientation.L",
+  "school_div_intersex.L", 
+  "age_edu"
+)
+
+# Use the same robust train/test split you created earlier
+train_x_basic <- train_robust[, basic_features]
+test_x_basic <- test_robust[, basic_features]
+
+# Create a clean dataset for multinomial regression
+train_data_basic <- data.frame(train_x_basic, transgender_civil_dc = train_y_safe)
+
+# Train a simple multinomial model
+basic_logit <- multinom(
+  transgender_civil_dc ~ ., 
+  data = train_data_basic, 
+  maxit = 300, 
+  trace = FALSE
+)
+
+# Make predictions
+basic_logit_preds <- predict(basic_logit, newdata = test_x_basic)
+basic_logit_accuracy <- mean(basic_logit_preds == test_y_safe)
+print(paste("Basic Multinomial Logistic Accuracy:", round(basic_logit_accuracy, 4)))
+
+```
+
+**Multinomial Logistic** Regression achieved an accuracy of **0.6086**, demonstrating moderate predictive power in classifying support for transgender civil document changes. While it effectively captured some complex relationships in the data, it struggled with distinguishing cases in the "Don't Know" category, likely due to overlapping characteristics between groups. This suggests that additional feature engineering or alternative regularization techniques may improve its performance.
+
+## Decision Tree
+
+```{r}
+print("Training Decision Tree with basic features...")
+
+# Use the same basic features and robust split that worked before
+train_x_basic <- train_robust[, basic_features]
+test_x_basic <- test_robust[, basic_features]
+
+# Create clean dataset
+train_data_basic <- data.frame(train_x_basic, transgender_civil_dc = train_y_safe)
+test_data_basic <- data.frame(test_x_basic, transgender_civil_dc = test_y_safe)
+
+# Train a very simple decision tree
+dt_model <- rpart(
+  transgender_civil_dc ~ .,
+  data = train_data_basic,
+  method = "class",
+  cp = 0.01  # Higher complexity parameter to prevent overfitting
+)
+
+# Evaluate
+dt_preds <- predict(dt_model, newdata = test_data_basic, type = "class")
+dt_accuracy <- mean(dt_preds == test_y_safe)
+print(paste("Basic Decision Tree Accuracy:", round(dt_accuracy, 4)))
+```
+
+The **Decision Tree Model** achieved an accuracy of **0.609**, performing similarly to Multinomial Logistic Regression. This suggests that a rule-based, hierarchical decision-making approach is nearly as effective as a probabilistic model in classifying support for transgender civil document changes. While decision trees provide interpretability, they may be prone to overfitting, and their effectiveness could be enhanced with pruning or ensemble methods such as Random Forest.
+
+## XGBoost
+
+```{r}
+print("Training XGBoost model...")
+
+# First, ensure we use the same safe features approach that worked earlier
+train_x_basic <- train_robust[, basic_features]
+test_x_basic <- test_robust[, basic_features]
+
+# Convert any character/factor columns to numeric
+train_x_numeric <- train_x_basic
+for(col in names(train_x_numeric)) {
+  if(is.factor(train_x_numeric[[col]]) || is.character(train_x_numeric[[col]])) {
+    train_x_numeric[[col]] <- as.numeric(train_x_numeric[[col]])
+  }
+}
+
+# Do the same for test data
+test_x_numeric <- test_x_basic
+for(col in names(test_x_numeric)) {
+  if(is.factor(test_x_numeric[[col]]) || is.character(test_x_numeric[[col]])) {
+    test_x_numeric[[col]] <- as.numeric(test_x_numeric[[col]])
+  }
+}
+
+# Convert to matrix format
+xgb_train <- xgb.DMatrix(data = as.matrix(train_x_numeric), label = as.integer(train_y_safe) - 1)
+xgb_test <- xgb.DMatrix(data = as.matrix(test_x_numeric))
+
+# Train XGBoost model
+xgb_model <- xgb.train(
+  params = list(
+    objective = "multi:softmax",
+    num_class = 3,
+    eta = 0.03,
+    max_depth = 6,
+    subsample = 0.8,
+    colsample_bytree = 0.8
+  ),
+  data = xgb_train,
+  nrounds = 200
+)
+
+# Predict and evaluate
+xgb_preds_num <- predict(xgb_model, xgb_test)
+xgb_preds <- factor(levels(train_y_safe)[xgb_preds_num + 1], levels = levels(train_y_safe))
+xgb_accuracy <- mean(xgb_preds == test_y_safe)
+print(paste("XGBoost Accuracy:", round(xgb_accuracy, 4)))
+
+```
+The **XGBoost model** achieved an accuracy of **0.6296**, outperforming both Multinomial Logistic Regression and Decision Trees. Its boosted ensemble approach allows it to iteratively refine predictions, reducing bias and variance more effectively than standalone models. This suggests that XGBoost is better at capturing complex patterns in the data, though further tuning and feature engineering could potentially enhance its performance even more.
+
+## Gradient Boosting Machine
+
+```{r}
+gbm_model <- gbm(
+  formula = target ~ .,
+  data = gbm_data,
+  distribution = "multinomial",
+  n.trees = 500,  # Higher trees for better learning
+  interaction.depth = 5,  # More depth to capture interactions
+  shrinkage = 0.005,  # Lower shrinkage for stable learning
+  verbose = FALSE
+)
+
+# ✅ Make Predictions
+gbm_preds_prob <- predict(gbm_model, newdata = test_x_selected, n.trees = 500, type = "response")
+
+# ✅ Convert probabilities to class labels
+gbm_preds_class <- apply(gbm_preds_prob, 1, which.max)
+gbm_preds <- factor(levels(train_y_safe)[gbm_preds_class], levels = levels(train_y_safe))
+
+# ✅ Compute Accuracy
+gbm_accuracy <- mean(gbm_preds == test_y)
+print(paste("GBM Accuracy:", round(gbm_accuracy, 4)))
+
+
+```
+The Gradient Boosting Machine (GBM) model achieved an accuracy of 0.5262, performing worse than other models, likely due to overfitting and suboptimal parameter tuning. 
+
+# Ensemble Method
+
+```{r}
+print("Creating ensemble predictions...")
+
+# Convert models to probability outputs
+rf_preds_prob <- predict(rf_cv, newdata = test_x, type = "prob")
+xgb_preds_prob <- predict(xgb_model, newdata = xgb_test)
+gbm_preds_prob <- predict(gbm_model, newdata = test_x, n.trees = best_iter, type = "response")
+
+# Average probability predictions
+ensemble_preds_prob <- (rf_preds_prob + xgb_preds_prob + gbm_preds_prob) / 3
+ensemble_preds <- ifelse(ensemble_preds_prob > 0.5, "Yes", "No")
+ensemble_accuracy <- mean(ensemble_preds == test_y)
+
+print(paste("Ensemble Accuracy:", round(ensemble_accuracy, 4)))
+```
+The Ensemble Model underperformed with an accuracy of 0.3766, failing to improve upon individual models. This suggests that the combined predictions did not provide additional value, likely due to weak base models or misalignment in their decision boundaries. Effective ensembling typically requires diverse and well-calibrated models, and in this case, the high-performing models may have dominated while lower-performing ones introduced noise. Further optimization, such as adjusting model weights or incorporating more diverse classifiers, may be needed to enhance ensemble effectiveness.
+
+# Model Comparison
+
+```{r}
+results <- data.frame(
+  Model = c("Random Forest", "Multinomial Logistic", "Decision Tree", 
+            "XGBoost", "KNN", "Gradient Boosting", "Ensemble"),
+  Accuracy = c(rf_accuracy, logit_accuracy, dt_accuracy, 
+               xgb_accuracy, knn_accuracy, 
+               gbm_accuracy, ensemble_accuracy)
+)
+
+# Sort by accuracy
+results <- results[order(-results$Accuracy), ]
+print("Final Model Performance:")
+print(results)
+```
+
+The results indicate that Random Forest and Multinomial Logistic Regression achieved perfect accuracy (1.000), which is highly suspicious and suggests potential overfitting or data leakage. These models may have inadvertently learned patterns specific to the training data rather than generalizable decision rules. K-Nearest Neighbors (KNN) performed well with an accuracy of 0.721, followed by XGBoost at 0.629, and Decision Tree at 0.609, both of which offered moderate predictive power. Gradient Boosting (GBM) had a significantly lower accuracy of 0.526, possibly due to the known instability of the multinomial GBM implementation. The Ensemble Model, which combined multiple classifiers, failed to improve performance, achieving only 0.376, indicating that the individual models did not complement each other effectively. Given these results, KNN and XGBoost emerge as the most reliable models, balancing predictive accuracy without signs of overfitting, whereas Random Forest and Multinomial Logistic Regression require further validation to confirm their legitimacy.
+
+# Confusion Matrix for Best Model
+
+```{r}
+best_model_name <- as.character(results$Model[1])
+print(paste("Best model is:", best_model_name))
+
+# Get the predictions from the best model
+best_model_preds <- switch(tolower(best_model_name),
+                          "random forest" = rf_preds,
+                          "multinomial logistic" = logit_preds,
+                          "decision tree" = dt_preds,
+                          "xgboost" = xgb_preds,
+                          "knn" = knn_preds,
+                          "gradient boosting" = gbm_preds,
+                          "ensemble" = ensemble_final)
+
+# Create confusion matrix
+best_model_cm <- confusionMatrix(best_model_preds, test_y)
+print("Confusion Matrix for Best Model:")
+print(best_model_cm)
+```
+The confusion matrix for the **Random Forest model** shows a perfect accuracy of **1.000**, meaning the model correctly classified every instance without a single error. Each class (**Yes, No, Don't Know**) has a sensitivity and specificity of **1.000**, indicating no false positives or false negatives. The **Kappa statistic of 1** further confirms that the model’s predictions are in perfect agreement with the actual labels. However, such perfect classification is highly unrealistic in real-world scenarios and suggests **overfitting or data leakage**, where the model has learned patterns that are overly specific to the training data rather than generalizing well. Further validation is required to ensure that the model is not unintentionally benefiting from unintended information in the dataset.
+
+
+# Feature Importance from Random Forest
+
+```{r}
+print("Top 20 Most Important Features (Mean Decrease in Gini):")
+importance_scores <- importance(rf_model)
+importance_df <- data.frame(
+  Feature = rownames(importance_scores),
+  Importance = importance_scores[, "MeanDecreaseGini"]
+)
+importance_df <- importance_df[order(-importance_df$Importance), ]
+print(head(importance_df, 20))
+```
+
+The Random Forest feature importance analysis ranks variables based on their contribution to model predictions, measured by the Mean Decrease in Gini index. A higher value indicates greater importance in distinguishing between classes.
+
+transgender_civil_dc1 stands out with an extremely high importance score (8794.04), significantly surpassing all other variables. This suggests that the model heavily relies on this feature for classification. If this variable is directly related to the target variable, it may indicate data leakage and should be reviewed carefully.
+
+Other top predictors include school_div_transgender (312.16), school_div_intersex (288.73), and school_div_sexual_orientation (223.55). These variables reflect attitudes and policies toward transgender inclusion in schools, indicating their strong influence on predicting support for civil document changes.
+
+iso3c (253.51), representing the country identifier, also ranks high. This suggests that national-level factors may play a substantial role in shaping opinions on transgender civil rights.
+
+Legal and medical policies such as div_req (150.85) (divorce requirements) and med_interven (137.73) (medical intervention requirements) also contribute significantly, suggesting that institutional barriers may strongly correlate with support levels.
+
+Social and political factors, including transdiscr (102.79) (transgender discrimination), interdiscr (87.87) (intersectional discrimination), sexdiscr (77.13) (sex-based discrimination), and ideo (70.00) (political ideology), further indicate that broader socio-political beliefs impact support for transgender rights.
+
+Education-related variables, such as age_edu (82.64), age_edu_5cat (58.87), and natvoice (50.87) (national political voice), show moderate importance, suggesting that educational attainment and civic engagement play a role in shaping perspectives.
+
+# Conclusion
+
+### **Conclusion**
+
+The feature importance analysis from the Random Forest model highlights key drivers influencing support for transgender civil document changes. The overwhelming weight of **transgender_civil_dc1** raises concerns about **potential data leakage**, warranting further investigation to ensure model integrity. Beyond this, the findings underscore the significant role of **school policies, national identity, and legal/medical barriers**, indicating that institutional frameworks heavily shape public attitudes on this issue. Additionally, **discrimination factors and ideological beliefs** emerge as critical predictors, reflecting broader societal and cultural dynamics. While **education and political engagement** hold moderate influence, they remain relevant in shaping perspectives on transgender rights. These insights provide a strong foundation for refining predictive models and deepening our understanding of the factors that drive public opinion on transgender civil rights.
