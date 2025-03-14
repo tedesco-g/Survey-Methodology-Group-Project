@@ -660,7 +660,6 @@ On the other hand, **age restrictions (age_restrict), sterilization requirements
 
 Overall, the data underscores the uneven distribution of gender recognition policies, where self-identification and name change procedures are more commonly available than more restrictive requirements such as sterilization or mandatory medical interventions.
 
-### Multilevel Modeling
 
 
 ```{r}
@@ -718,8 +717,6 @@ The **top panel (alpha)** represents the **thresholds** (cut-points) between res
 The **bottom panel (beta)** shows the effects of **gender, religion, and political ideology** on support for transgender rights. The **gender coefficient (1.31) is significant**, suggesting that **women are 31% more likely than men to support transgender rights**. Similarly, **religion has a small positive effect (1.05)**, meaning that religious individuals are slightly more likely to express support. In contrast, **political ideology (1.00, in red) has a significant but minimal impact**, implying that ideological leanings have little influence in this model.  
 
 Overall, these findings indicate that **gender is the strongest predictor**, followed by **religion**, while **political ideology has a negligible effect**. Additionally, individuals who are uncertain about their stance tend to lean toward support rather than opposition.
-
-```{r}
 
 
 
