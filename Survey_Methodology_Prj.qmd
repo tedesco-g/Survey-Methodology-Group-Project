@@ -707,7 +707,11 @@ table(final_data$transgender_civil_dc)
 prop.table(table(final_data$transgender_civil_dc)) * 100 
 ```
 
-#### gina's graph
+#### Highest Education Level Reached Per Country
+
+We categorized respondents’ highest completed education levels according to the ISCED classification, grouping responses into categories such as pre-primary, primary, lower secondary, upper secondary, vocational, tertiary, and still studying. The dataset was processed to ensure that missing or unclear responses (“Refused/Don’t Know”) were treated separately. A summary table was created, aggregating the number of respondents per education level in each country, which was then merged with education spending data to explore possible trends.
+
+The visualization is a stacked column chart where each bar represents a country, and segments within the bars indicate the number of respondents who attained each education level. Different colors correspond to different education levels, making it easy to compare distributions across countries. The stacking approach allows us to see the total number of respondents per country while also distinguishing the proportion of each education level.
 
 ```{r}
 education_levels <- final_data %>%
@@ -768,9 +772,13 @@ hchart(education_summary, "column",
                            Education Level: {point.ISCED_Level}<br>
                            Respondents: {point.y}")
 
-
-
 ```
+
+The chart reveals significant variation in education attainment across European countries. In many countries, the most common highest level reached is upper secondary education (green) and tertiary education (dark blue), highlighting the prevalence of formal secondary and higher education. Vocational education (orange) is prominent in some countries, reflecting differences in technical and skill-based training systems.
+
+Some countries show a relatively high proportion of respondents who are still studying (light blue), which could indicate either a younger sample population or longer average study durations. The presence of “Refused/Don’t Know” (purple) suggests a small number of respondents were unwilling or unable to report their education level.
+
+Countries with a lower proportion of tertiary education might indicate barriers to higher education access, such as financial constraints or differing national policies on higher education affordability. The integration of spending data could provide further insights into whether higher education attainment correlates with increased investment in different education levels.
 
 #### Distribution of responses to Question 19…
 
