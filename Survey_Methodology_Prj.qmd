@@ -56,8 +56,8 @@ data_clean<- data %>%
   mutate(across(where(is.labelled), as.numeric))
 
 data_clean <- data_clean |> 
- select(where(is.numeric))|>
-  select(-c(edition,studyno1, studyno2,survey, caseid, uniqid))
+ dplyr::select(where(is.numeric))|>
+  dplyr::select(-c(edition,studyno1, studyno2,survey, caseid, uniqid))
 ```
 
 ### Handling missing data
@@ -302,12 +302,12 @@ In conclusion, the differences across countries shed light on how cultural facto
 ```{r}
 # Step 1:  relevant columns from filtered_data
 selected_data <- filtered_data |>
-  select(c(
+  dplyr::select(c(
     "serialid", "d70", "d71_1", "d71_2", "d71_3", "d72_1", "d72_2", "polintr", "d10", "d25", "d1", "d63", "sd2_1", "sd2_2", "sd2_3", "sd2_4", "sd2_5", "sd2_6", "sd2_7", "sd3", "qc1_4", "qc1_8", "qc1_10", "d8r1", "d8r2", "d8", "qc19"))
 
 # Step 2: relevant columns from `data`
 country_data <- data |>
-  select("serialid", "isocntry", "qc17_4", "qc17_3", "qc17_5")
+  dplyr::select("serialid", "isocntry", "qc17_4", "qc17_3", "qc17_5")
 
 colnames(trans_health_data) <- tolower(colnames(trans_health_data))
 colnames(ilga_data) <- tolower(colnames(ilga_data))
@@ -385,10 +385,10 @@ depath = `depathologisation`
 
 
 merged_data<- merged_data |> 
-  select(-c(x, isocntry, ...1))
+  dplyr::select(-c(x, isocntry, ...1))
   
   
-merged_data <- merged_data |> select(country, iso3c, everything())
+merged_data <- merged_data |> dplyr::select(country, iso3c, everything())
 
 
 
@@ -431,7 +431,7 @@ In this analysis, we examined the missing data patterns in the dataset to assess
 final_data <- as.data.frame(final_data)
 
 # only variables with missing data for imputation
-impute_vars <- final_data %>% select(`preprim_exp`, `prim_exp`, `lose_exp`, `upse_exp`, `voc_exp`)
+impute_vars <- final_data %>% dplyr::select(`preprim_exp`, `prim_exp`, `lose_exp`, `upse_exp`, `voc_exp`)
 
 # Generate a predictor matrix
 predictorMatrix <- make.predictorMatrix(impute_vars)
@@ -480,7 +480,7 @@ The visualization confirms that after performing mean imputation, all missing va
 ```{r}
 #  only individual-level variables
 individual_vars <- final_data %>%
-  select(gender, age_edu_5cat, age_edu_11cat, polintr, natvoice, euvoice, relig, 
+  dplyr::select(gender, age_edu_5cat, age_edu_11cat, polintr, natvoice, euvoice, relig, 
          roma, skin, sexdiscr, transdiscr, school_div_transgender, 
          school_div_sexual_orientation, school_div_intersex, transgender_civil_dc)
 
@@ -489,7 +489,9 @@ individual_vars <- final_data %>%
 We categorized survey variables into meaningful groups (e.g., Demographics, Identity, School Measures). Then, we reshaped the data into a long format and assigned clear labels for better interpretation. We created histograms to visualize the distribution of numerical variables and a bar chart to analyze categorical variables (e.g., gender). The workflow enhances data organization, clarity, and visualization for better insights.
 
 ```{r}
-# Categorize Variables
+
+
+# Function to Categorize Variables
 categorize_variables <- function(var_name) {
   if (var_name %in% c("age_edu_5cat", "age_edu_11cat", "skin")) {
     return("Demographics")
@@ -527,13 +529,12 @@ improved_data <- individual_vars %>%
     )
   )
 
-# Function for Histograms
+# Function to Create Histograms
 create_improved_histogram <- function(data, group_name) {
   filtered_data <- data %>% filter(Variable_Group == group_name)
-  
-  ggplot(filtered_data, aes(x = Value, fill = after_stat(count))) +
-    geom_histogram(bins = 15, color = "white", alpha = 0.9) +
-    scale_fill_viridis(option = "D", name = "Count", direction = 1) +
+
+  ggplot(filtered_data, aes(x = Value)) +
+    geom_histogram(bins = 15, color = "white", fill = "blue", alpha = 0.9) +
     facet_wrap(~replace_na(Variable_Label, "Unknown"), scales = "free", ncol = 2) +
     labs(
       title = paste("Distribution of", group_name),
@@ -551,24 +552,29 @@ create_improved_histogram <- function(data, group_name) {
       strip.background = element_rect(fill = "lightgray", color = NA),
       panel.spacing = unit(1, "lines"),
       legend.position = "right",
-      plot.margin = margin(10, 10, 10, 10, unit= "pt")
+      #plot.margin(margin(10,10,10,10))
     )
 }
 
-# Generate Plots
+# Generate Histograms
 demographics_plot <- create_improved_histogram(improved_data, "Demographics")
 information_plot <- create_improved_histogram(improved_data, "School Should Give Information Measures")
 voice_plot <- create_improved_histogram(improved_data, "Voice Representation")
 identity_plot <- create_improved_histogram(improved_data, "Identity")
 other_plot <- create_improved_histogram(improved_data, "Other Variables")
 
-# Function for Bar Chart
+# Function to Create Bar Charts
 create_bar_chart <- function(data, variable_name) {
-  var_data <- individual_vars %>%
-    select(all_of(variable_name)) %>%
+  if (!variable_name %in% colnames(data)) {
+    stop(paste("Error: Column", variable_name, "not found in data!"))
+  }
+
+  var_data <- data %>%
+    dplyr::select(all_of(variable_name)) %>%
     rename(Value = all_of(variable_name)) %>%
+    drop_na() %>%  # Remove missing values
     group_by(Value) %>%
-    summarize(Count = n()) %>%
+    summarize(Count = n(), .groups = "drop") %>%
     mutate(
       Percentage = Count / sum(Count) * 100,
       Value = factor(Value)
@@ -582,7 +588,7 @@ create_bar_chart <- function(data, variable_name) {
   if (length(var_label) == 0) {
     var_label <- variable_name
   }
-  
+
   ggplot(var_data, aes(x = Value, y = Percentage, fill = Percentage)) +
     geom_bar(stat = "identity", width = 0.7) +
     geom_text(aes(label = sprintf("%.1f%%", Percentage)), position = position_stack(vjust = 0.5), color = "black") +
@@ -591,7 +597,13 @@ create_bar_chart <- function(data, variable_name) {
     theme_minimal()
 }
 
-gender_bar <- create_bar_chart(individual_vars, "gender")
+# Generate Bar Chart for Gender
+if ("gender" %in% colnames(individual_vars)) {
+  gender_bar <- create_bar_chart(individual_vars, "gender")
+} else {
+  print("Warning: The column 'gender' is missing from the dataset!")
+}
+
 
 ```
 
@@ -1128,7 +1140,7 @@ Finally, the **random effects** for country-level variability (**0.7931**) indic
 
 In conclusion, **gender** and **religion** are strong predictors of support for transgender rights, with **atheists and non-religious individuals** showing the highest support. The **interaction between gender and religion** further refines this relationship, showing that women in certain religious groups, such as **Sikh** and **Orthodox Christian** communities, are more likely to support transgender rights. Political ideology plays a smaller role, but still has a positive effect. The model also highlights significant **country-level variations**, suggesting that national context is crucial in shaping individual attitudes toward transgender rights.
 
-\*\*Comparison Between Model 1 and Model 2
+**Comparison Between Model 1 and Model 2**
 
 he second model provided a clearer and more nuanced understanding of how gender and religion work together to shape attitudes toward transgender rights. The interaction terms allowed for a deeper analysis of how support for transgender rights differs not just by gender or religion alone, but by their intersection. This approach brought additional complexity and depth to the model, which helped uncover patterns that were not apparent in the first model.
 
