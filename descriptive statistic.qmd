@@ -9,8 +9,7 @@ library(tidyverse)
 library(readr)
 library(viridis)
 library(mice)
-
-final_data <- read_csv("final_data.csv")
+final_data <-read_csv("data_cleaning_files/final_data.csv")
 
 final_data<- final_data[, -1]
 
