@@ -392,54 +392,7 @@ prop.table(table(final_data$transgender_civil_dc)) * 100
 
 ```
 
-```{r}
 
-library(MASS)
-library(lme4)
-
-final_data$gender <- as.factor(final_data$gender)
-final_data$iso3c <- as.factor(final_data$iso3c)
-
-final_data <- final_data %>%
-  mutate(transgender_civil_dc  = case_when(
-    transgender_civil_dc  == 1 ~ 1,  # Support
-    transgender_civil_dc  == 2 ~ 0,  # Oppose
-    transgender_civil_dc == 3 ~ 0 # Don't Know (set as NA)
-  ))
-
-
-model1 <- glmer(transgender_civil_dc ~ gender + (1 | iso3c), 
-                data = final_data, 
-                family = binomial, 
-                control = glmerControl(optimizer = "bobyqa"))
-
-list(model1)
-
-
-```
-
-The ordered logistic regression model provides valuable insights into the factors influencing support for transgender rights across different countries while accounting for country-level variations. The model has an Akaike Information Criterion (AIC) of 31415.22 and a Bayesian Information Criterion (BIC) of 31439.70, which are useful for model comparison. The log-likelihood (-15704.61) and deviance (31409.22) indicate the overall fit of the model. With 25,898 residual degrees of freedom, the model effectively utilizes the dataset while maintaining a good balance between complexity and interpretability.
-
-The model incorporates random intercepts for countries (ISO3C), with a standard deviation of 0.94. This suggests that support for transgender rights varies significantly across different European countries. Some countries exhibit stronger support, while others show lower acceptance, emphasizing the importance of regional and cultural differences in shaping attitudes toward transgender rights.
-
-The fixed effects estimate for the intercept is -0.0592, representing the baseline log-odds of supporting transgender rights for the reference category (likely male). The coefficient for gender (0.2910) indicates that women are more likely to support transgender rights compared to men. The positive sign of the coefficient suggests that identifying as female increases the likelihood of expressing support for transgender rights.
-
-The findings demonstrate that gender plays a significant role in shaping attitudes toward transgender rights, with women showing higher levels of support than men. Additionally, there is notable variation in support across countries, indicating that national-level factors contribute to differences in attitudes toward transgender individuals.
-
-```{r}
-library(sjPlot)
-plot_model(model1, type = "est", show.values = TRUE, title = "Effect of Gender on Support for Transgender Rights")
-
-
-
-
-
-
-```
-
-This plot visualizes the effect of gender on support for transgender rights, expressed in odds ratios (OR). The odds ratio of 1.34 that female individuals are 34% more likely to support transgender rights compared to the male group .
-
-The red dot represents the estimated odds ratio, and the confidence interval is likely small, suggesting a statistically significant effect. The presence of next to the value implies a high level of statistical significance (p \< 0.001). Since the odds ratio is above 1, it confirms that gender positively influences support for transgender rights.
 
 ## **Country Level Analysis**
 
@@ -707,14 +660,69 @@ On the other hand, **age restrictions (age_restrict), sterilization requirements
 
 Overall, the data underscores the uneven distribution of gender recognition policies, where self-identification and name change procedures are more commonly available than more restrictive requirements such as sterilization or mandatory medical interventions.
 
+### Multilevel Modeling
 
 
 ```{r}
 
+library(MASS)
+library(lme4)
+
+
+
+# Convert to an ordered factor
+final_data$transgender_civil_dc <- factor(final_data$transgender_civil_dc, 
+                                          levels = c(2, 3, 1), 
+                                          labels = c("Oppose", "Don't Know", "Support"),
+                                          ordered = TRUE)
+
+
+model_ord <- polr(transgender_civil_dc ~ gender + religion+ ideo,
+                  data = final_data, method = "logistic")
+
+summary(model_ord)
 
 
 
 
 ```
 
-hi
+
+The ordered logistic regression model examines the factors influencing support for transgender rights, with three response categories: **Oppose, Don't Know, and Support**. The independent variables include **gender, religion, and political ideology** as individual-level predictors.  
+
+The results show that **gender has a significant impact**, with women being **more likely** to support transgender rights compared to men. The coefficient for gender (0.270, p < 0.001) suggests that women express higher levels of support, indicating that gender is a strong predictor of attitudes toward transgender rights.  
+
+Religious affiliation also has a positive effect on support, though its impact is smaller. The coefficient for religion (0.045, p < 0.001) suggests that religious individuals are slightly more likely to support transgender rights. This finding contrasts with traditional assumptions that religious beliefs may be associated with opposition, highlighting potential differences across religious groups or levels of religiosity.  
+
+Political ideology, on the other hand, has a **negative effect** (-0.0025, p < 0.001), meaning that **more conservative individuals are less likely** to support transgender rights. This aligns with existing literature suggesting that progressive or left-leaning individuals are generally more supportive of LGBTQ+ rights, while conservative individuals tend to express lower levels of support.  
+
+The model also estimates **thresholds between response categories**. The **transition between "Oppose" and "Don't Know" (-0.0179, p = 0.40)** is not statistically significant, suggesting that individuals who oppose transgender rights are not distinctly different from those who are uncertain. However, the transition between **"Don't Know" and "Support" (0.4701, p < 0.001)** is statistically significant, indicating that individuals who are unsure are more likely to shift toward support rather than opposition.  
+
+The model demonstrates a reasonable fit, with a **residual deviance of 45,025.34** and an **AIC of 45,035.34**, meaning that gender, religion, and ideology explain a significant portion of the variation in support for transgender rights.  
+
+These findings indicate that **women show higher support for transgender rights**, **religion has a slight positive association with support**, and **conservative individuals are less supportive**. Additionally, those who are uncertain tend to lean toward support rather than opposition. Future research could expand the model by incorporating **education, income, or regional factors** to further explain variations in public attitudes toward transgender rights.nces in attitudes toward transgender individuals.
+
+```{r}
+
+library(sjPlot)
+plot_model(model_ord, type = "est", show.values = TRUE, title = "Effect of Variables on Support for Transgender Rights")
+
+
+
+```
+
+This visualization presents the **odds ratios (ORs)** for the ordered logistic regression model predicting support for transgender rights. The graph is divided into two sections:  
+
+The **top panel (alpha)** represents the **thresholds** (cut-points) between response categories. The odds ratio for moving from **Oppose to Don't Know (0.98)** is not statistically significant, indicating that individuals in these two groups may not be distinctly different. However, the **odds of moving from Don't Know to Support (1.60) are significant**, meaning that individuals who are unsure are more likely to shift toward support rather than opposition.  
+
+The **bottom panel (beta)** shows the effects of **gender, religion, and political ideology** on support for transgender rights. The **gender coefficient (1.31) is significant**, suggesting that **women are 31% more likely than men to support transgender rights**. Similarly, **religion has a small positive effect (1.05)**, meaning that religious individuals are slightly more likely to express support. In contrast, **political ideology (1.00, in red) has a significant but minimal impact**, implying that ideological leanings have little influence in this model.  
+
+Overall, these findings indicate that **gender is the strongest predictor**, followed by **religion**, while **political ideology has a negligible effect**. Additionally, individuals who are uncertain about their stance tend to lean toward support rather than opposition.
+
+```{r}
+
+
+
+
+```
+
