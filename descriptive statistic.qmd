@@ -344,13 +344,13 @@ final_data <- final_data %>%
   filter(religion %in% names(religion_labels))
 
 # Convert religion variable to factor with specific labels
-final_data$religion <- factor(final_data$religion, 
+final_data$religion1 <- factor(final_data$religion, 
                               levels = names(religion_labels), 
                               labels = religion_labels)
 
 # Count occurrences
 religion_counts <- final_data %>%
-  group_by(religion) %>%
+  group_by(religion1) %>%
   summarise(Count = n()) %>%
   arrange(Count)
 
@@ -359,7 +359,7 @@ religion_counts <- religion_counts %>%
   mutate(Percentage = (Count / sum(Count)) * 100)
 
 # Create bar plot
-ggplot(religion_counts, aes(x = reorder(religion, Count), y = Percentage, fill = religion)) +
+ggplot(religion_counts, aes(x = reorder(religion1, Count), y = Percentage, fill = religion1)) +
   geom_bar(stat = "identity", width = 0.7) +
   scale_fill_viridis_d() +
   coord_flip()+
@@ -671,18 +671,18 @@ library(lme4)
 
 
 # Convert to an ordered factor
-final_data$transgender_civil_dc <- factor(final_data$transgender_civil_dc, 
+final_data$transgender_civil_dc1 <- factor(final_data$transgender_civil_dc, 
                                           levels = c(2, 3, 1), 
                                           labels = c("Oppose", "Don't Know", "Support"),
                                           ordered = TRUE)
 
 
 
-final_data$ideo <- scale(final_data$ideo)  
+final_data$ideo1 <- scale(final_data$ideo)  
 
 control_settings <- glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000))
 
-model1<- glmer(transgender_civil_dc ~ gender + religion + ideo + 
+model1<- glmer(transgender_civil_dc1 ~ gender + religion1 + ideo + 
                   (1 | iso3c), 
                 data = final_data, 
                 family = binomial, 
@@ -738,7 +738,7 @@ However, the **residuals vs. fitted values plot** displays a noticeable curvatur
 # Model with a quadratic term for gender
 final_data$gender_squared <- final_data$gender^2
 
-model2 <- glmer(transgender_civil_dc ~ gender + gender_squared + religion + ideo + (1 | iso3c),
+model2 <- glmer(transgender_civil_dc1 ~ gender + gender_squared + religion1 + ideo1 + (1 | iso3c),
                 data = final_data,
                 family = binomial,
                 control = glmerControl(optimizer = "bobyqa"))
@@ -780,7 +780,7 @@ Given that the second model did not significantly improve the AIC, BIC, or other
 
 library(nnet)
 
-model_multinomial <- multinom(transgender_civil_dc ~ gender + religion + ideo,
+model_multinomial <- multinom(transgender_civil_dc1 ~ gender + religion1 + ideo1,
                               data = final_data)
 
 summary(model_multinomial)
@@ -806,7 +806,7 @@ library(caret)
 train_control <- trainControl(method = "cv", number = 10)
 
 # Train the model using multinomial logistic regression with cross-validation
-cv_model <- train(transgender_civil_dc ~ gender + religion + ideo,
+cv_model <- train(transgender_civil_dc1 ~ gender + religion1 + ideo1,
                   data = final_data,
                   method = "multinom",  # Multinomial logistic regression
                   trControl = train_control)
