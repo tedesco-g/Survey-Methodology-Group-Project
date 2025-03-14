@@ -701,6 +701,88 @@ ggplot(region_support, aes(x = region, y = support_percentage, fill = region)) +
 ```
 
 ```{r}
+
+# Define country codes and sample values
+country_codes <- data.frame(
+  country = c("Belgium", "Denmark", "Greece", "Spain", "Finland", "France", "Ireland", "Italy",
+              "Luxembourg", "Netherlands", "Austria", "Portugal", "Sweden", "Bulgaria", "Cyprus",
+              "Czech Republic", "Estonia", "Hungary", "Latvia", "Lithuania", "Malta", "Poland",
+              "Romania", "Slovenia", "Croatia"),
+  iso3c = c("BEL", "DNK", "GRC", "ESP", "FIN", "FRA", "IRL", "ITA", "LUX", "NLD", 
+           "AUT", "PRT", "SWE", "BGR", "CYP", "CZE", "EST", "HUN", "LVA", "LTU", 
+           "MLT", "POL", "ROU", "SVN", "HRV") # ISO-3 Codes
+)
+
+
+
+
+
+percentage <- final_data %>%
+  group_by(iso3c) |>
+  count(transgender_civil_dc) %>%  # Count occurrences of each unique value
+  mutate(percentage = (n / sum(n)) * 100) 
+
+
+percentage <- percentage%>%
+  left_join(country_codes, by = "iso3c")
+
+
+
+# Aggregate data and handle missing values
+aggregated_data <- percentage %>%
+  group_by(iso3c) %>%
+  summarise(
+    tooltip_text = paste0(
+      "<b>Yes:</b> ", ifelse(any(transgender_civil_dc == 1), 
+                              round(percentage[transgender_civil_dc == 1], 1), "0"), "%<br>",
+      "<b>No:</b> ", ifelse(any(transgender_civil_dc == 2), 
+                             round(percentage[transgender_civil_dc == 2], 1), "0"), "%<br>",
+      "<b>DK:</b> ", ifelse(any(transgender_civil_dc == 3), 
+                             round(percentage[transgender_civil_dc == 3], 1), "0"), "%"
+    ),
+    dominant_dc = transgender_civil_dc[which.max(percentage)] # Get dominant category
+  ) %>%
+  ungroup()
+
+
+
+
+
+hcmap("custom/europe", 
+      data = aggregated_data,
+      name = "Transgender Civil DC Levels",
+      joinBy = c("iso-a3", "iso3c"),  # Ensure correct mapping
+      value = "dominant_dc",  # Color based on dominant category
+      dataLabels = list(enabled = TRUE, format = '{point.name}'),
+      borderColor = "#ffffff") %>%
+  hc_colorAxis(dataClasses = list(
+    list(from = 1, to = 1, color = "#007bff", name = "Yes"),      # Blue for Yes
+    list(from = 2, to = 2, color = "#ffd700", name = "No"),      # Yellow for No
+    list(from = 3, to = 3, color = "#4caf50", name = "DK")       # Green for DK
+  )) %>%
+  hc_tooltip(
+    useHTML = TRUE,
+    headerFormat = "<span style='font-size:16px; font-weight:bold'>{point.name}</span><br>",
+    pointFormat = "<div style='width:260px; font-size:14px; line-height:1.5'>{point.tooltip_text}</div>",
+    borderWidth = 2,
+    borderColor = "#333",
+    backgroundColor = "rgba(255, 255, 255, 0.95)",
+    style = list(fontSize = "14px", padding = "12px")
+  ) %>%
+  hc_chart(
+    width = 1200,  # Increase width for a broader view
+    height = 850   # Increase height to avoid squeezing the map
+  ) %>%
+  hc_mapNavigation(
+    enabled = TRUE,  # Allow zooming manually
+    enableButtons = TRUE,  # Enable zoom control buttons
+    enableMouseWheelZoom = FALSE  # Disable automatic mouse zoom for better control
+  ) %>%
+  hc_title(text = "Transgender Civil DC Support Levels in Europe (Zoomed Out)")
+
+```
+
+```{r}
 summary(final_data)
 
 table(final_data$transgender_civil_dc)
