@@ -379,6 +379,9 @@ ggplot(religion_counts, aes(x = reorder(religion, Count), y = Percentage, fill =
 
 ```
 
+The distribution of religious denominations shows that Catholicism is the most dominant religion, followed by Orthodox Christianity and Protestantism, while Non-believers/Agnostics and Atheists also represent a significant portion, indicating a strong secular trend. Muslim groups, including Sunni, Shia, and Other Muslim, are relatively small, suggesting they are a minority in the surveyed population. Other religions, such as Buddhism, Judaism, Hinduism, and Sikhism, have minimal representation. Additionally, a small percentage of respondents either refused to disclose their religious affiliation or selected “Don’t Know,” highlighting potential reluctance or uncertainty regarding religious identity. The data overall reflects a predominantly Christian population with notable secular tendencies and limited religious diversity.
+
+
 ```{r}
 
 summary(final_data)
@@ -621,6 +624,19 @@ ggplot(econ_long, aes(x = Value, fill = Variable)) +
 
 ```
 
+
+The distribution of **education expenditure as a percentage of GDP (edu_exp_pct)** shows that most countries allocate between 4% and 6% of their GDP to education, with some outliers spending more than 7%. This suggests that education is a significant budget priority, but the variation indicates differing national policies and economic capabilities.  
+
+The **GDP distribution** is highly skewed, with most observations concentrated at lower values and a few countries with significantly higher GDPs. This highlights economic disparities among the nations in the dataset, where a small number of countries dominate in terms of economic output.  
+
+When examining **education expenditure across different levels**, lower secondary (lose_exp), upper secondary (upse_exp), and tertiary education (ter_exp) expenditures are concentrated in the 90-97% range. This suggests that most countries prioritize these educational stages, ensuring substantial funding. Primary education (prim_exp) also receives strong investment, with values largely between 85% and 100%, showing consistency in educational priorities.  
+
+On the other hand, **pre-primary education expenditure (preprim_exp)** displays a more dispersed distribution, though most values remain high, indicating recognition of the importance of early childhood education. In contrast, **vocational education expenditure (voc_exp)** exhibits a more varied pattern, with peaks at both 75% and 100%, suggesting that while some countries emphasize vocational training, others invest less in this area.  
+
+Overall, the distributions illustrate a global trend of strong financial commitment to general education, with some variations in economic capacity and prioritization of specific educational stages.
+
+
+
 ### **Health Variables**
 
 ```{r}
@@ -648,6 +664,13 @@ ggplot(health_vars_long, aes(x = Value, fill = Variable)) +
   
 
 ```
+The distribution of health service variables highlights varying levels of access and demand for different medical interventions. **Hormone replacement therapies (HRT)** for both **testosterone and oestrogen** appear to be widely utilized, with most values concentrated around 1, suggesting high accessibility or demand. Similarly, **psychological and psychiatric care** also show a high density at the lower values, indicating that these services are commonly accessed.  
+
+Among surgical procedures, **breast augmentation, electrolysis (laser hair removal), facial feminization surgery, and vocal training** show a skewed distribution towards lower values, suggesting that while some individuals access these services, they may not be as widely available or utilized. In contrast, more invasive procedures such as **hysterectomy, mastectomy, metoidioplasty, orchiectomy, and phalloplasty** exhibit a more spread-out distribution, possibly reflecting differences in medical eligibility, personal choice, or systemic barriers to access.  
+
+Lastly, **tracheal shave and vaginoplasty** follow similar patterns, with most density at the lower end, indicating that while these procedures are available, fewer individuals access them compared to psychological or hormonal treatments. Overall, the distribution suggests a tiered access to gender-affirming care, where non-surgical and hormonal interventions are more frequently used than complex surgical procedures.
+
+
 
 ## **Law Variables**
 
@@ -675,8 +698,22 @@ ggplot(legal_vars_long, aes(x = Value, fill = Variable)) +
 
  
 ```
+ 
+The distribution of **legal and medical transition-related variables** reflects significant variations in policy and accessibility across different aspects of gender recognition and intervention.  
+
+Variables such as **self-determination (self_det), name change, and non-binary recognition (nb_recog)** indicate a higher concentration at lower values, suggesting that these aspects of gender identity recognition are not widely accessible or standardized across regions. Similarly, **medical intervention requirements (med_interven) and psychological diagnosis (psych_diag)** show a higher density at the lower end, implying that in many cases, medical or psychiatric evaluation may not be a strict prerequisite for gender recognition.  
+
+On the other hand, **age restrictions (age_restrict), sterilization requirements (steril_req), and surgical intervention mandates (surg_interven)** appear less commonly enforced, as their distributions are more spread out, indicating variability in policy adoption. Additionally, **the existence of legal gender marker options (exist_lgme) and recognition of gender for minors (lgrp_minors)** suggest that while some countries have progressive measures in place, these rights are not universally accessible.  
+
+Overall, the data underscores the uneven distribution of gender recognition policies, where self-identification and name change procedures are more commonly available than more restrictive requirements such as sterilization or mandatory medical interventions.
+
+
 
 ```{r}
+
+
+
+
 
 ```
 
