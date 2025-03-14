@@ -4,11 +4,12 @@ format: html
 editor: visual
 ---
 
-```{r}
+```{r, message = FALSE}
 library(tidyverse)
 library(readr)
 library(viridis)
 library(mice)
+
 final_data <-read_csv("data_cleaning_files/final_data.csv")
 
 final_data<- final_data[, -1]
@@ -26,8 +27,6 @@ summary(final_data)
 
 ```
 
-
-
 ```{r}
 
 library(ggplot2)
@@ -39,9 +38,8 @@ gg_miss_var(final_data) +
   labs(title = "Missing Data Patterns")
 
 ```
+
 In this analysis, we examined the missing data patterns in my dataset to assess data completeness and identify potential issues. The visualization helped determine which variables contain missing values and to what extent. While some variables were fully observed, others had significant gaps, requiring appropriate handling strategies.
-
-
 
 ```{r}
 
@@ -83,14 +81,11 @@ summary(final_data$upse_exp)
 
 ```
 
+In this analysis, we handled missing data using mean imputation with the MICE package. This method replaces missing values with the average of observed values for each variable, preventing data loss while maintaining consistency. We focused on five education expenditure variables (preprim_exp, prim_exp, lose_exp, upse_exp, voc_exp), ensuring they no longer contain missing values.
 
-
-In this analysis, we handled missing data using mean imputation with the MICE package. This method replaces missing values with the average of observed values for each variable, preventing data loss while maintaining consistency. We focused on five education expenditure variables (preprim_exp, prim_exp, lose_exp, upse_exp, voc_exp), ensuring they no longer contain missing values.  
-
-After imputation, the summary statistics confirmed that all variables now have complete data, with reasonable mean and range values. However, since mean imputation can reduce variability, we need to check whether the data distribution has been affected. Notably, voc_exp has a minimum value of 0, unlike other variables with higher minimums, suggesting a different distribution pattern.  
+After imputation, the summary statistics confirmed that all variables now have complete data, with reasonable mean and range values. However, since mean imputation can reduce variability, we need to check whether the data distribution has been affected. Notably, voc_exp has a minimum value of 0, unlike other variables with higher minimums, suggesting a different distribution pattern.
 
 Overall, our imputation process successfully addressed missing data, making the dataset more reliable for further analysis. To ensure the imputed values align well with the data structure, we recommend additional visual checks, such as histograms or density plots.
-
 
 ```{r}
 
@@ -106,7 +101,6 @@ gg_miss_var(final_data) +
 The visualization confirms that after performing mean imputation, all missing values in the dataset have been successfully handled. The vertical bar at zero missing values indicates that no variables contain missing data anymore. This means our imputation process effectively filled in all gaps, making the dataset complete and ready for further analysis.
 
 # **Descriptive Statistic**
-
 
 **Individual level data**
 
@@ -254,14 +248,14 @@ This variable categorizes individuals based on the age at which they completed f
 
 In the **detailed 11-category version**, respondents are categorized from **"Up to 14 years" (1) to "22 years and older" (9)**, alongside **"Still studying" (10)** and **"No full-time education" (11)**. The most common completion ages are **15 years (2) and 16 years (3)**, suggesting that a significant proportion of individuals exit full-time education during their teenage years. In contrast, fewer respondents remain in school past the age of 21.
 
-The **simplified 5-category classification** merges some of these distinctions, grouping individuals as:  
-- **"Up to 15 years" (1):** Those who left school by age 15.  
-- **"16-19 years" (2):** Individuals who completed education in their late teens.  
-- **"20 years and older" (3):** Those pursuing education beyond 19.  
-- **"Still studying" (4):** Respondents currently in full-time education.  
-- **"No full-time education" (5):** Individuals who never attended full-time education.  
+The **simplified 5-category classification** merges some of these distinctions, grouping individuals as:\
+- **"Up to 15 years" (1):** Those who left school by age 15.\
+- **"16-19 years" (2):** Individuals who completed education in their late teens.\
+- **"20 years and older" (3):** Those pursuing education beyond 19.\
+- **"Still studying" (4):** Respondents currently in full-time education.\
+- **"No full-time education" (5):** Individuals who never attended full-time education.
 
-Across both classifications, the data highlights that **most individuals leave full-time education at 15 or 16 years old**, with fewer continuing beyond that. The presence of a **"Still studying"** category indicates an active student population, but the relatively low frequencies in higher education categories suggest that **early school leaving is prevalent**. 
+Across both classifications, the data highlights that **most individuals leave full-time education at 15 or 16 years old**, with fewer continuing beyond that. The presence of a **"Still studying"** category indicates an active student population, but the relatively low frequencies in higher education categories suggest that **early school leaving is prevalent**.
 
 These findings offer insights into **educational attainment trends** and could be useful for **policymakers looking to improve retention in higher education**.
 
@@ -269,11 +263,9 @@ Additionally, The skin color variable helps categorize individuals based on whet
 
 The dataset includes two main categories. The first category (**0 - Not mentioned**) represents individuals who do not identify as part of a racial or ethnic minority based on their skin color. The second category (**1 - A minority in terms of skin color**) includes individuals who perceive themselves as belonging to a racial or ethnic minority group due to their skin tone.
 
-The distribution of responses shows that the vast majority of individuals fall into the "Not mentioned" category, meaning they do not consider themselves as part of a skin color minority. In contrast, a much smaller proportion of respondents identify as belonging to a racial minority. 
+The distribution of responses shows that the vast majority of individuals fall into the "Not mentioned" category, meaning they do not consider themselves as part of a skin color minority. In contrast, a much smaller proportion of respondents identify as belonging to a racial minority.
 
 This finding suggests that racial or ethnic minorities based on skin color constitute a relatively small fraction of the dataset. Understanding this demographic breakdown is essential when examining disparities in economic opportunities, access to education, or social integration. Additionally, this variable can be used to investigate potential discrimination or differences in social perception based on racial identity.
-
-
 
 ```{r}
  information_plot
@@ -292,24 +284,24 @@ The graph represents perceptions of voice representation in two contexts: at the
 
 The data suggests that a significant portion of respondents "Tend to agree" (2) that their voice is heard both in their country and in the EU, making it the most common response. However, there are also notable groups that "Tend to disagree" (3) or "Totally disagree" (4), indicating skepticism about their influence in political or social discussions. The distribution is relatively similar for both European and national contexts, suggesting that perceptions of representation do not differ drastically between these two levels.
 
-
 ```{r}
 identity_plot
 ```
-The dataset analysis highlights how many people identify as religious or ethnic minorities. The graphs show that most individuals do not consider themselves part of these groups. In particular, only a small number identify as part of a religious minority, and the same goes for those who declare a Roma identity.
 
+The dataset analysis highlights how many people identify as religious or ethnic minorities. The graphs show that most individuals do not consider themselves part of these groups. In particular, only a small number identify as part of a religious minority, and the same goes for those who declare a Roma identity.
 
 ```{r}
 gender_bar
 ```
-According to the results, 54.7% of the respondents are female, while 45.3% are male. This indicates a slight overrepresentation of females in the survey compared to males. The relatively balanced distribution suggests that responses are not significantly skewed toward one gender, allowing for a more comprehensive analysis of gender-based trends and perspectives.
 
+According to the results, 54.7% of the respondents are female, while 45.3% are male. This indicates a slight overrepresentation of females in the survey compared to males. The relatively balanced distribution suggests that responses are not significantly skewed toward one gender, allowing for a more comprehensive analysis of gender-based trends and perspectives.
 
 ```{r}
 
 other_plot
 
 ```
+
 Discrimination Based on Sexual Orientation and Gender Identity
 
 Discrimination against individuals based on their **sexual orientation and gender identity** remains a significant issue across various societies. The survey categorizes public perceptions of discrimination into six levels: **Very widespread, Fairly widespread, Fairly rare, Very rare, Non-existent (Spontaneous), and Don’t know (DK)**. These categories help assess the extent to which individuals recognize discrimination in their respective countries.
@@ -322,11 +314,9 @@ Comparing discrimination against transgender individuals and sexual orientation-
 
 These findings emphasize the need for **stronger anti-discrimination policies, legal protections, and social awareness initiatives** to ensure the fair treatment of LGBTQ+ individuals. Addressing these issues through education and policy reforms is crucial for fostering inclusive societies that respect and uphold the rights of all individuals, regardless of their gender identity or sexual orientation.
 
-
 Political Interest
 
 The Political Interest Index categorizes respondents into four levels: Strong (1), Medium (2), Low (3), and Not at all (4). The distribution shows that the majority of respondents fall into the Medium category, suggesting that most individuals engage with politics to some degree but do not exhibit strong interest. Meanwhile, fewer respondents report either strong political interest or no interest at all. This suggests a general trend toward moderate political engagement among participants.
-
 
 ```{r}
 
@@ -389,8 +379,6 @@ ggplot(religion_counts, aes(x = reorder(religion, Count), y = Percentage, fill =
 
 ```
 
-
-
 ```{r}
 
 summary(final_data)
@@ -445,12 +433,12 @@ plot_model(model1, type = "est", show.values = TRUE, title = "Effect of Gender o
 
 
 ```
-This plot visualizes the effect of gender on support for transgender rights, expressed in odds ratios (OR). The odds ratio of 1.34 that female individuals are 34% more likely to support transgender rights compared to the male group . 
 
-The red dot represents the estimated odds ratio, and the confidence interval is likely small, suggesting a statistically significant effect. The presence of next to the value implies a high level of statistical significance (p < 0.001). Since the odds ratio is above 1, it confirms that gender positively influences support for transgender rights.
+This plot visualizes the effect of gender on support for transgender rights, expressed in odds ratios (OR). The odds ratio of 1.34 that female individuals are 34% more likely to support transgender rights compared to the male group .
 
-## **Country Level Analysis** 
+The red dot represents the estimated odds ratio, and the confidence interval is likely small, suggesting a statistically significant effect. The presence of next to the value implies a high level of statistical significance (p \< 0.001). Since the odds ratio is above 1, it confirms that gender positively influences support for transgender rights.
 
+## **Country Level Analysis**
 
 ```{r}
 
@@ -594,8 +582,6 @@ final_data %>%
 
 ### **Economic Summary**
 
-
-
 ```{r}
 economic_summary <- final_data |> 
   group_by(country) |> 
@@ -613,7 +599,6 @@ economic_summary <- final_data |>
 print(economic_summary)
 
 ```
-
 
 ```{r}
 econ_data <- final_data[, c("gdp", "edu_exp_pct", "preprim_exp", 
@@ -664,8 +649,7 @@ ggplot(health_vars_long, aes(x = Value, fill = Variable)) +
 
 ```
 
-
-## **Law Variables** 
+## **Law Variables**
 
 ```{r}
 
@@ -691,8 +675,9 @@ ggplot(legal_vars_long, aes(x = Value, fill = Variable)) +
 
  
 ```
+
 ```{r}
 
 ```
-hi
 
+hi
