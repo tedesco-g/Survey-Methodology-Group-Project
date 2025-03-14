@@ -33,6 +33,8 @@ library(tidyr)
 library(patchwork)
 library(car)
 library(nnet)
+library(highcharter)
+library(scales)
 ```
 
 ## Data uploading
@@ -979,6 +981,72 @@ When examining **education expenditure across different levels**, lower secondar
 On the other hand, **pre-primary education expenditure (preprim_exp)** displays a more dispersed distribution, though most values remain high, indicating recognition of the importance of early childhood education. In contrast, **vocational education expenditure (voc_exp)** exhibits a more varied pattern, with peaks at both 75% and 100%, suggesting that while some countries emphasize vocational training, others invest less in this area.
 
 Overall, the distributions illustrate a global trend of strong financial commitment to general education, with some variations in economic capacity and prioritization of specific educational stages.
+
+#### GDP vs. Education Expenditure
+
+here…
+
+```{r}
+# Prepare data
+data_2019 <- edueco_data %>%
+  drop_na(NY.GDP.MKTP.CD, SE.XPD.TOTL.GD.ZS, country) %>%
+  mutate(GDP_trillions = NY.GDP.MKTP.CD / 1e12,  # Convert GDP to Trillions USD
+         Total_Education_Spending = (NY.GDP.MKTP.CD * SE.XPD.TOTL.GD.ZS) / 100,
+         Spending_Billions = Total_Education_Spending / 1e9,  # Convert Spending to Billions USD
+         Education_Percent_GDP = round(SE.XPD.TOTL.GD.ZS, 2),  # Round % of GDP spent on education
+         Spending_Category = cut(Spending_Billions, 
+                                 breaks = c(-Inf, 20, 50, 100, Inf), 
+                                 labels = c("Low (<20B)", "Medium (20B-50B)", 
+                                            "High (50B-100B)", "Very High (>100B)")))
+
+# Explicitly Define Colors for Categories
+spending_colors <- c("#1E90FF",  # Bright Blue (Low <20B)
+                     "#FFD700",  # Gold (Medium 20B-50B)
+                     "#FF4500",  # Red-Orange (High 50B-100B)
+                     "#8B0000")  # Dark Red (Very High >100B)
+
+# Create the chart with gradient background and y-axis starting at 0
+hchart(data_2019, "bubble", hcaes(x = GDP_trillions, y = Spending_Billions, 
+                                  size = Spending_Billions, group = Spending_Category, 
+                                  name = country)) %>%
+  hc_chart(
+    backgroundColor = list(
+      linearGradient = list(x1 = 0, y1 = 0, x2 = 0, y2 = 1),
+      stops = list(
+        list(0, '#1E1E3F'),    # Dark blue at the top
+        list(1, '#0A0A15')     # Near black at the bottom
+      )
+    )
+  ) %>%
+  hc_title(text = "Education Spending Patterns in Europe (2019)", 
+           style = list(color = "white", fontSize = "20px")) %>%
+  hc_subtitle(text = "Comparing GDP and Total Education Spending", 
+              style = list(color = "white", fontSize = "14px")) %>%
+  hc_xAxis(title = list(text = "GDP (Trillions USD)", style = list(color = "white")),
+           labels = list(style = list(color = "white")),
+           gridLineColor = "#444444") %>%
+  hc_yAxis(title = list(text = "Total Education Spending (Billions USD)", 
+                        style = list(color = "white")),
+           labels = list(style = list(color = "white")),
+           gridLineColor = "#444444",
+           min = 0) %>%  # Set y-axis to start at 0
+  hc_legend(layout = "horizontal", align = "right", verticalAlign = "bottom",
+            itemStyle = list(color = "white")) %>%
+  # Apply Colors Using hc_colors() 
+  hc_colors(spending_colors) %>%
+  hc_tooltip(useHTML = TRUE, 
+             backgroundColor = "white",  # White background
+             borderColor = "black",
+             style = list(color = "black", fontSize = "14px"),  # Ensure all text is black
+             formatter = JS("function() {
+               return '<b>' + this.point.name + '</b><br>' +
+                      '<b>GDP:</b> ' + Highcharts.numberFormat(this.x, 2) + 'T USD<br>' +
+                      '<b>Education Spending:</b> ' + Highcharts.numberFormat(this.y, 2) + 'B USD<br>' +
+                      '<b>% of GDP Spent on Education:</b> ' + Highcharts.numberFormat(this.point.Education_Percent_GDP, 2) + '%<br>' +
+                      '<b>Category:</b> ' + this.series.name;
+             }"))
+
+```
 
 #### Health Variables
 
