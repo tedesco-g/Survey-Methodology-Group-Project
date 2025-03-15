@@ -23,7 +23,6 @@ library(visdat)
 library(mice)
 library(GGally)
 library(corrplot)
-library(randomForest)
 library(ggcorrplot)
 library(reshape2)
 library(readr)
@@ -40,6 +39,15 @@ library(car)
 library(nnet)
 library(highcharter)
 library(scales)
+library(rpart)        # Decision Tree
+library(randomForest) # Random Forest
+library(class)        # KNN
+library(pROC)         # For AUC-ROC evaluation
+library(xgboost)      # For XGBoost
+library(gbm)          # For Gradient Boosting
+library(MLmetrics)
+library(smotefamily)
+library(fastDummies)
 ```
 
 ## Data uploading
