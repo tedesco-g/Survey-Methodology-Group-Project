@@ -2113,6 +2113,12 @@ Overall, the results highlight the strong influence of legal, educational, and s
 
 This project analyzed the factors influencing support for transgender rights across Europe and developed a predictive model to forecast support levels in other countries. Individual-level analysis revealed that gender and religion are key drivers, with women and non-believers showing higher support, while political ideology has a lesser impact. Country-level findings showed that legal frameworks and healthcare access shape public attitudes more than economic factors like GDP. Our predictive modeling highlighted the strength of Random Forest, Multinomial Logistic Regression, Decision Trees, and XGBoost, though concerns about Random Forest overfitting were noted. Feature importance analysis emphasized the role of transgender civil document policies, school inclusion measures, legal and medical requirements, and discrimination factors in shaping opinions. The overwhelming weight of transgender_civil_dc1 raised potential data leakage concerns, requiring further validation. These findings underscore the complex interplay of individual beliefs, institutional policies, and societal norms in shaping support for transgender rights and highlight the need for rigorous model refinement to enhance predictive accuracy.
 
+Based on the Gradient Boosting Machine (GBM) model's predictions, the estimated level of support for the transgender rights policy in country X would depend on its similarity to the countries in the training dataset. Since the model's overall accuracy is 65.83%, and its class-wise sensitivity for "Yes" (support) is 82.61%, we can approximate the probability of support by considering the class distributions.
+
+From the confusion matrix and class prevalence rates, the model suggests:
+
+52.57% of countries in the dataset support trans rights. 35.83% do not support it. 11.6% are uncertain (Don't Know). If country X closely aligns with countries in the dataset that exhibit strong support, we can estimate that the probability of support is around 50-55%. However, given the model's bias toward overpredicting "Yes" and underpredicting "Don't Know," a more conservative estimate would be a 45-50% probability of policy support.
+
 ## References
 
 Asher & Lyric. (2023, August 8). Global Trans Rights Index: 203 countries ranked in 2023.<https://www.asherfergusson.com/global-trans-rights-index/>
