@@ -1371,7 +1371,7 @@ final_data$sec_exp <- final_data$lose_exp + final_data$upse_exp
 final_data$prim_exp <- final_data$preprim_exp + final_data$prim_exp
 
 model_data<- final_data %>%
-  dplyr::select(-psychiatric.care)
+  dplyr::select(-c("psychiatric.care","religion1"))
 
 head(model_data)
 
