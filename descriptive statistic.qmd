@@ -382,8 +382,6 @@ ggplot(religion_counts, aes(x = reorder(religion1, Count), y = Percentage, fill 
 
 The distribution of religious denominations shows that Catholicism is the most dominant religion, followed by Orthodox Christianity and Protestantism, while Non-believers/Agnostics and Atheists also represent a significant portion, indicating a strong secular trend. Muslim groups, including Sunni, Shia, and Other Muslim, are relatively small, suggesting they are a minority in the surveyed population. Other religions, such as Buddhism, Judaism, Hinduism, and Sikhism, have minimal representation. Additionally, a small percentage of respondents either refused to disclose their religious affiliation or selected “Don’t Know,” highlighting potential reluctance or uncertainty regarding religious identity. The data overall reflects a predominantly Christian population with notable secular tendencies and limited religious diversity.
 
-
-
 ```{r}
 final_data$iso3c1 <-as.numeric(final_data$iso3c)
 
@@ -425,13 +423,6 @@ ggplot(region_support, aes(x = region, y = support_percentage, fill = region)) +
 
 ```
 
-
-
-
-
-
-
-
 ```{r}
 
 summary(final_data)
@@ -441,8 +432,6 @@ prop.table(table(final_data$transgender_civil_dc)) * 100
 
 
 ```
-
-
 
 ## **Country Level Analysis**
 
@@ -627,18 +616,15 @@ ggplot(econ_long, aes(x = Value, fill = Variable)) +
 
 ```
 
+The distribution of **education expenditure as a percentage of GDP (edu_exp_pct)** shows that most countries allocate between 4% and 6% of their GDP to education, with some outliers spending more than 7%. This suggests that education is a significant budget priority, but the variation indicates differing national policies and economic capabilities.
 
-The distribution of **education expenditure as a percentage of GDP (edu_exp_pct)** shows that most countries allocate between 4% and 6% of their GDP to education, with some outliers spending more than 7%. This suggests that education is a significant budget priority, but the variation indicates differing national policies and economic capabilities.  
+The **GDP distribution** is highly skewed, with most observations concentrated at lower values and a few countries with significantly higher GDPs. This highlights economic disparities among the nations in the dataset, where a small number of countries dominate in terms of economic output.
 
-The **GDP distribution** is highly skewed, with most observations concentrated at lower values and a few countries with significantly higher GDPs. This highlights economic disparities among the nations in the dataset, where a small number of countries dominate in terms of economic output.  
+When examining **education expenditure across different levels**, lower secondary (lose_exp), upper secondary (upse_exp), and tertiary education (ter_exp) expenditures are concentrated in the 90-97% range. This suggests that most countries prioritize these educational stages, ensuring substantial funding. Primary education (prim_exp) also receives strong investment, with values largely between 85% and 100%, showing consistency in educational priorities.
 
-When examining **education expenditure across different levels**, lower secondary (lose_exp), upper secondary (upse_exp), and tertiary education (ter_exp) expenditures are concentrated in the 90-97% range. This suggests that most countries prioritize these educational stages, ensuring substantial funding. Primary education (prim_exp) also receives strong investment, with values largely between 85% and 100%, showing consistency in educational priorities.  
-
-On the other hand, **pre-primary education expenditure (preprim_exp)** displays a more dispersed distribution, though most values remain high, indicating recognition of the importance of early childhood education. In contrast, **vocational education expenditure (voc_exp)** exhibits a more varied pattern, with peaks at both 75% and 100%, suggesting that while some countries emphasize vocational training, others invest less in this area.  
+On the other hand, **pre-primary education expenditure (preprim_exp)** displays a more dispersed distribution, though most values remain high, indicating recognition of the importance of early childhood education. In contrast, **vocational education expenditure (voc_exp)** exhibits a more varied pattern, with peaks at both 75% and 100%, suggesting that while some countries emphasize vocational training, others invest less in this area.
 
 Overall, the distributions illustrate a global trend of strong financial commitment to general education, with some variations in economic capacity and prioritization of specific educational stages.
-
-
 
 ### **Health Variables**
 
@@ -667,13 +653,12 @@ ggplot(health_vars_long, aes(x = Value, fill = Variable)) +
   
 
 ```
-The distribution of health service variables highlights varying levels of access and demand for different medical interventions. **Hormone replacement therapies (HRT)** for both **testosterone and oestrogen** appear to be widely utilized, with most values concentrated around 1, suggesting high accessibility or demand. Similarly, **psychological and psychiatric care** also show a high density at the lower values, indicating that these services are commonly accessed.  
 
-Among surgical procedures, **breast augmentation, electrolysis (laser hair removal), facial feminization surgery, and vocal training** show a skewed distribution towards lower values, suggesting that while some individuals access these services, they may not be as widely available or utilized. In contrast, more invasive procedures such as **hysterectomy, mastectomy, metoidioplasty, orchiectomy, and phalloplasty** exhibit a more spread-out distribution, possibly reflecting differences in medical eligibility, personal choice, or systemic barriers to access.  
+The distribution of health service variables highlights varying levels of access and demand for different medical interventions. **Hormone replacement therapies (HRT)** for both **testosterone and oestrogen** appear to be widely utilized, with most values concentrated around 1, suggesting high accessibility or demand. Similarly, **psychological and psychiatric care** also show a high density at the lower values, indicating that these services are commonly accessed.
+
+Among surgical procedures, **breast augmentation, electrolysis (laser hair removal), facial feminization surgery, and vocal training** show a skewed distribution towards lower values, suggesting that while some individuals access these services, they may not be as widely available or utilized. In contrast, more invasive procedures such as **hysterectomy, mastectomy, metoidioplasty, orchiectomy, and phalloplasty** exhibit a more spread-out distribution, possibly reflecting differences in medical eligibility, personal choice, or systemic barriers to access.
 
 Lastly, **tracheal shave and vaginoplasty** follow similar patterns, with most density at the lower end, indicating that while these procedures are available, fewer individuals access them compared to psychological or hormonal treatments. Overall, the distribution suggests a tiered access to gender-affirming care, where non-surgical and hormonal interventions are more frequently used than complex surgical procedures.
-
-
 
 ## **Law Variables**
 
@@ -701,15 +686,14 @@ ggplot(legal_vars_long, aes(x = Value, fill = Variable)) +
 
  
 ```
- 
-The distribution of **legal and medical transition-related variables** reflects significant variations in policy and accessibility across different aspects of gender recognition and intervention.  
 
-Variables such as **self-determination (self_det), name change, and non-binary recognition (nb_recog)** indicate a higher concentration at lower values, suggesting that these aspects of gender identity recognition are not widely accessible or standardized across regions. Similarly, **medical intervention requirements (med_interven) and psychological diagnosis (psych_diag)** show a higher density at the lower end, implying that in many cases, medical or psychiatric evaluation may not be a strict prerequisite for gender recognition.  
+The distribution of **legal and medical transition-related variables** reflects significant variations in policy and accessibility across different aspects of gender recognition and intervention.
 
-On the other hand, **age restrictions (age_restrict), sterilization requirements (steril_req), and surgical intervention mandates (surg_interven)** appear less commonly enforced, as their distributions are more spread out, indicating variability in policy adoption. Additionally, **the existence of legal gender marker options (exist_lgme) and recognition of gender for minors (lgrp_minors)** suggest that while some countries have progressive measures in place, these rights are not universally accessible.  
+Variables such as **self-determination (self_det), name change, and non-binary recognition (nb_recog)** indicate a higher concentration at lower values, suggesting that these aspects of gender identity recognition are not widely accessible or standardized across regions. Similarly, **medical intervention requirements (med_interven) and psychological diagnosis (psych_diag)** show a higher density at the lower end, implying that in many cases, medical or psychiatric evaluation may not be a strict prerequisite for gender recognition.
+
+On the other hand, **age restrictions (age_restrict), sterilization requirements (steril_req), and surgical intervention mandates (surg_interven)** appear less commonly enforced, as their distributions are more spread out, indicating variability in policy adoption. Additionally, **the existence of legal gender marker options (exist_lgme) and recognition of gender for minors (lgrp_minors)** suggest that while some countries have progressive measures in place, these rights are not universally accessible.
 
 Overall, the data underscores the uneven distribution of gender recognition policies, where self-identification and name change procedures are more commonly available than more restrictive requirements such as sterilization or mandatory medical interventions.
-
 
 ### **Multicolinearity**
 
@@ -762,11 +746,11 @@ plot_model(model1, type = "est", show.values = TRUE, title = "Effect of Variable
 
 ```
 
-This visualisation provides a clearer picture of what influences support for transgender rights. **Women (OR = 1.49, p < 0.001)** are significantly more likely to be supportive compared to men, reinforcing the idea that gender plays a key role in shaping attitudes.  
+This visualisation provides a clearer picture of what influences support for transgender rights. **Women (OR = 1.49, p \< 0.001)** are significantly more likely to be supportive compared to men, reinforcing the idea that gender plays a key role in shaping attitudes.
 
-Religious beliefs also make a big difference. **Atheists (OR = 1.74, p < 0.001) and non-believers/agnostics (OR = 1.54, p < 0.001)** are much more likely to support transgender rights, while **Hindus (OR = 0.65) and Sikhs (OR = 0.49)** show lower support. Other religious groups, such as Orthodox Christians, Protestants, and Muslims, show more mixed results, meaning their views vary within their communities.  
+Religious beliefs also make a big difference. **Atheists (OR = 1.74, p \< 0.001) and non-believers/agnostics (OR = 1.54, p \< 0.001)** are much more likely to support transgender rights, while **Hindus (OR = 0.65) and Sikhs (OR = 0.49)** show lower support. Other religious groups, such as Orthodox Christians, Protestants, and Muslims, show more mixed results, meaning their views vary within their communities.
 
-**Political ideology (OR = 1.04, p < 0.01)** also plays a role—people with more progressive views tend to be more supportive, though the effect is smaller compared to gender and religion.  
+**Political ideology (OR = 1.04, p \< 0.01)** also plays a role—people with more progressive views tend to be more supportive, though the effect is smaller compared to gender and religion.
 
 Overall, this model highlights that **gender and secular beliefs are strong predictors of support, while religious affiliation and ideology also shape opinions in meaningful ways.** There’s still variation across groups, showing how complex attitudes toward transgender rights can be depending on social and cultural backgrounds.
 
@@ -779,10 +763,7 @@ print(vif_values)  # Display results
 
 The **GVIF values** indicate that multicollinearity is not a concern in this model, as all values are close to 1. This suggests that gender, religion, and ideology do not exhibit a strong linear relationship with one another, minimizing the risk of multicollinearity affecting the model’s estimates.
 
-However, the **residuals vs. fitted values plot** displays a noticeable curvature rather than a random distribution, indicating a potential issue with model specification. Ideally, residuals should be randomly dispersed around zero, but the observed pattern suggests that the assumptions of **homoscedasticity and linearity** may not be met. This issue could be addressed by considering alternative model specifications, such as a **probit model** instead of a logit model, or by incorporating **interaction terms** to account for potential non-linear relationships. 
-
-
-
+However, the **residuals vs. fitted values plot** displays a noticeable curvature rather than a random distribution, indicating a potential issue with model specification. Ideally, residuals should be randomly dispersed around zero, but the observed pattern suggests that the assumptions of **homoscedasticity and linearity** may not be met. This issue could be addressed by considering alternative model specifications, such as a **probit model** instead of a logit model, or by incorporating **interaction terms** to account for potential non-linear relationships.
 
 ```{r}
 # Model with a quadratic term for gender
@@ -802,9 +783,9 @@ vcov(model2)
 
 ```
 
-The results from the ordered logistic regression model show that **gender**, **religion**, and **ideology** are significant predictors of support for transgender rights. 
+The results from the ordered logistic regression model show that **gender**, **religion**, and **ideology** are significant predictors of support for transgender rights.
 
-First, **gender** has a small positive effect on transgender rights support, with a coefficient of **0.000875**. This suggests that women are slightly more likely to support transgender rights compared to men, although the effect size is relatively small, indicating that gender alone may not be a strong predictor. 
+First, **gender** has a small positive effect on transgender rights support, with a coefficient of **0.000875**. This suggests that women are slightly more likely to support transgender rights compared to men, although the effect size is relatively small, indicating that gender alone may not be a strong predictor.
 
 **Religion** plays a larger role in shaping attitudes toward transgender rights. **Atheists (0.004328)** and **Non-believers/Agnostics (0.003025)** show a strong positive effect, indicating that individuals who identify as non-religious are significantly more likely to support transgender rights compared to religious groups. In contrast, **Orthodox Christians (-0.001287)**, **Muslim-Sunni (-0.001074)**, and **Muslim-Shia (-0.000937)** show negative coefficients, suggesting that these religious groups tend to have lower support for transgender rights. Interestingly, **Protestants (0.005205)** and **Other Christians (0.006760)** exhibit a positive relationship with support, meaning that Christians, particularly Protestants, are more likely to express support for transgender rights compared to Orthodox Christians.
 
@@ -816,15 +797,13 @@ Finally, the **random effects** for country-level variability (**0.7931**) indic
 
 In conclusion, **gender** and **religion** are strong predictors of support for transgender rights, with **atheists and non-religious individuals** showing the highest support. The **interaction between gender and religion** further refines this relationship, showing that women in certain religious groups, such as **Sikh** and **Orthodox Christian** communities, are more likely to support transgender rights. Political ideology plays a smaller role, but still has a positive effect. The model also highlights significant **country-level variations**, suggesting that national context is crucial in shaping individual attitudes toward transgender rights.
 
-**Comparison Between Model 1 and Model 2
+\*\*Comparison Between Model 1 and Model 2
 
 he second model provided a clearer and more nuanced understanding of how gender and religion work together to shape attitudes toward transgender rights. The interaction terms allowed for a deeper analysis of how support for transgender rights differs not just by gender or religion alone, but by their intersection. This approach brought additional complexity and depth to the model, which helped uncover patterns that were not apparent in the first model.
 
 Given that the second model did not significantly improve the AIC, BIC, or other fit statistics compared to the first model, it seems that adding interaction terms does not necessarily enhance the model’s ability to explain support for transgender rights. Therefore, it may be more practical to proceed with the first model, as it offers valuable insights while being simpler and more interpretable.
 
-
 **Cross-Validation**
-
 
 ```{r}
 
@@ -866,19 +845,13 @@ print(cv_model)
 
 ```
 
-
-
-
 ```{r}
 # Confusion matrix for the cross-validation model
 confusionMatrix(cv_model)
 
 ```
 
-
-
 **Adding Country Level**
-
 
 ```{r}
 
@@ -891,12 +864,12 @@ print(model_eco)
 
 
 ```
+
 In this analysis, a linear regression model was used to examine the relationship between support for transgender rights (dependent variable) and various economic factors (such as GDP, education expenditures, etc.). In the model, the transgender_civil_dc variable measures support for transgender rights, while the independent variables include various levels of education spending and economic indicators.
 
 The results show that GDP has a negligible effect on support, almost zero, while the impact of education expenditures is more mixed. Primary and tertiary education expenditures were positively related to support, whereas pre-primary and secondary education expenditures showed a slight negative effect. Additionally, vocational education spending had a small positive impact, though minimal.
 
 This model shows that economic factors alone don’t explain much about transgender rights support, as their effects are small and inconsistent. Gender and religion may play a more prominent role, so these factors should be explored further.
-
 
 ```{r}
 final_data_scaled <- final_data %>%
@@ -914,9 +887,6 @@ model4<- glmer(transgender_civil_dc1 ~ gender + religion1 + ideo1 + gdp + edu_ex
 summary(model4, correlation = TRUE)
 
 ```
-
-
-
 
 ```{r}
 
@@ -944,8 +914,6 @@ Similarly, psychological.care and psychiatric.care are perfectly correlated with
 
 There are also moderate positive correlations between GDP and variables like lose_exp and voc_exp, meaning wealthier countries tend to spend more on education and vocational training. On the other hand, gender and religion show weak correlations with economic and educational variables, implying that these factors have less impact on these areas.
 
-
-
 ```{r}
 final_data$sec_exp <- final_data$lose_exp + final_data$upse_exp
 final_data$prim_exp <- final_data$preprim_exp + final_data$prim_exp
@@ -956,4 +924,3 @@ final_data <- final_data %>%
 head(final_data)
 
 ```
-
