@@ -771,8 +771,12 @@ hcmap("custom/europe",
     style = list(fontSize = "14px", padding = "12px")
   ) %>%
   hc_chart(
-    width = 1200,  # Increase width for a broader view
-    height = 850   # Increase height to avoid squeezing the map
+    width = 550,  # Increase width for a broader view
+    height = 550, 
+    map= list(
+      zoom = 0.3,  # Daha uzak bir görünüm sağlar
+      center = list(latitude = 50, longitude = 10)  # Avrupa'nın merkezine odaklanır
+    )
   ) %>%
   hc_mapNavigation(
     enabled = TRUE,  # Allow zooming manually
