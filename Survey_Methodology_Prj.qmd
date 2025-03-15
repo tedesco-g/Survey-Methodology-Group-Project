@@ -1370,10 +1370,12 @@ There are also moderate positive correlations between GDP and variables like los
 final_data$sec_exp <- final_data$lose_exp + final_data$upse_exp
 final_data$prim_exp <- final_data$preprim_exp + final_data$prim_exp
 
-final_data <- final_data %>%
+model_data<- final_data %>%
   dplyr::select(-psychiatric.care)
 
-head(final_data)
+head(model_data)
+
+write.csv(model_data, "model_data.csv")
 
 ```
 

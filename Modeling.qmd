@@ -12,7 +12,6 @@ library(dplyr)
 library(caret)
 library(rpart)        # Decision Tree
 library(randomForest) # Random Forest
-library(class)        # KNN
 library(pROC)         # For AUC-ROC evaluation
 library(nnet)         # For Multinomial Logistic Regression
 library(xgboost)      # For XGBoost
@@ -26,8 +25,11 @@ library(fastDummies)
 
 ```{r}
 
+model_data <- read_csv("model_data.csv")
 # Start with the original dataset
-model_data <- final_data[, names(final_data) != "iso3c1"]
+model_data <- model_data[, names(model_data) != "iso3c1"]
+
+
 
 # Check for missing values
 print("NAs after removing iso3c1:")
@@ -149,9 +151,10 @@ print(table(test_y))
 
 
 ```
+
 This section begins by ensuring that missing values are identified and handled appropriately in the dataset. The target variable, transgender_civil_dc, is converted into a factor with three levels to prepare it for classification modeling. Various feature types, including categorical, ordinal, binary, and continuous variables, are defined and properly formatted, while single-level factors are removed to prevent errors. Finally, the dataset is split into training and testing sets before feature selection is performed using Random Forest importance scores, ensuring that only the most predictive features are retained for modeling.
 
-#   SMOTE
+# SMOTE
 
 ```{r}
 # Convert categorical variables into numeric using one-hot encoding
@@ -199,45 +202,67 @@ This section ensures that categorical variables are transformed into a numeric f
 # Load necessary libraries
 library(caret)
 
-# Ensure train_data_filtered is loaded and valid
-if (!exists("train_data_filtered")) {
-    stop("Error: train_data_filtered does not exist!")
+# Identify factors with only one level
+single_level_factors <- sapply(model_data, function(x) is.factor(x) && length(unique(x)) == 1)
+single_level_factors_names <- names(single_level_factors)[single_level_factors]
+
+# Print the single-level factors
+cat("Single-level factors:\n")
+print(single_level_factors_names)
+
+# Remove single-level factors
+model_data_filtered <- model_data[, !names(model_data) %in% single_level_factors_names]
+
+# Check the number of columns remaining
+cat("Number of columns after removing single-level factors: ", ncol(model_data_filtered))
+
+
+# Ensure model_data is loaded and valid
+if (!exists("model_data")) {
+    stop("Error: model_data_filtered does not exist!")
 }
 
 # Check for missing values
-na_counts <- colSums(is.na(train_data_filtered))
+na_counts <- colSums(is.na(model_data_filtered))
 if (any(na_counts > 0)) {
     cat("Warning: Missing values found! Fixing...\n")
-    for (col in names(train_data_filtered)) {
-        if (any(is.na(train_data_filtered[[col]]))) {
-            if (is.numeric(train_data_filtered[[col]])) {
-                train_data_filtered[[col]][is.na(train_data_filtered[[col]])] <- median(train_data_filtered[[col]], na.rm = TRUE)
+    for (col in names(model_data_filtered)) {
+        if (any(is.na(model_data_filtered[[col]]))) {
+            if (is.numeric(model_data_filtered[[col]])) {
+                model_data[[col]][is.na(model_data_filtered[[col]])] <- median(model_data[[col]], na.rm = TRUE)
             } else {
-                train_data_filtered[[col]][is.na(train_data_filtered[[col]])] <- as.character(stats::na.omit(train_data_filtered[[col]]))[1]
+                # For categorical data, replace NA with the most frequent value
+                most_frequent <- as.character(stats::na.omit(model_data[[col]]))[1]
+                model_data[[col]][is.na(model_data[[col]])] <- most_frequent
             }
         }
     }
     cat("Missing values filled.\n")
 }
 
-# Ensure categorical variables are factors
-train_data_filtered$transgender_civil_dc <- as.factor(train_data_filtered$transgender_civil_dc)
+# Ensure categorical variables are factors (make sure all categorical vars are converted)
+categorical_vars <- c("gender", "religion", "class", "ethnic", "skin", "relig", "roma", "sex", "disab", "other")  # Add other categorical columns here
+model_data[categorical_vars] <- lapply(model_data[categorical_vars], factor)
+
+# Convert the target variable to a factor (if not already done)
+model_data$transgender_civil_dc <- as.factor(model_data$transgender_civil_dc)
 
 # Set cross-validation control
 control <- trainControl(method = "cv", number = 5, verboseIter = TRUE)
 
 # Train Random Forest model
 rf_cv <- train(
-    transgender_civil_dc ~ .,
-    data = train_data_filtered,
-    method = "rf",
-    trControl = control,
-    tuneLength = 3,
-    ntree = 100
+    transgender_civil_dc ~ .,  # This formula uses all other variables as predictors
+    data = model_data_filtered,  # The dataset used for training
+    method = "rf",  # Random Forest method
+    trControl = control,  # Cross-validation settings
+    tuneLength = 3,  # Number of different hyperparameters to test
+    ntree = 100  # Number of trees for the random forest
 )
 
 # Print the model
 print(rf_cv)
+
 
 
 ```
@@ -247,15 +272,26 @@ The **Random Forest** results indicate that **mtry = 65** yielded perfect accura
 ## Multinomial Logistic Regression
 
 ```{r}
+
+set.seed(123)
+
+train_index <- createDataPartition(model_data_filtered$transgender_civil_dc, p = 0.8, list = FALSE)
+train_robust <- model_data_filtered[train_index, ]
+test_robust <- model_data_filtered[-train_index, ]
+
+train_y_safe <- train_robust$transgender_civil_dc
+test_y_safe <- test_robust$transgender_civil_dc
+
 print("Training Multinomial Logistic Regression with basic features...")
 
 # Create a very simple feature set with minimal risk of leakage
 basic_features <- c(
-  "school_div_transgender.L", 
-  "school_div_sexual_orientation.L",
-  "school_div_intersex.L", 
+  "school_div_transgender", 
+  "school_div_sexual_orientation",
+  "school_div_intersex", 
   "age_edu"
 )
+
 
 # Use the same robust train/test split you created earlier
 train_x_basic <- train_robust[, basic_features]
@@ -360,53 +396,274 @@ xgb_accuracy <- mean(xgb_preds == test_y_safe)
 print(paste("XGBoost Accuracy:", round(xgb_accuracy, 4)))
 
 ```
+
 The **XGBoost model** achieved an accuracy of **0.6296**, outperforming both Multinomial Logistic Regression and Decision Trees. Its boosted ensemble approach allows it to iteratively refine predictions, reducing bias and variance more effectively than standalone models. This suggests that XGBoost is better at capturing complex patterns in the data, though further tuning and feature engineering could potentially enhance its performance even more.
 
 ## Gradient Boosting Machine
 
 ```{r}
-gbm_model <- gbm(
-  formula = target ~ .,
-  data = gbm_data,
-  distribution = "multinomial",
-  n.trees = 500,  # Higher trees for better learning
-  interaction.depth = 5,  # More depth to capture interactions
-  shrinkage = 0.005,  # Lower shrinkage for stable learning
-  verbose = FALSE
-)
+# Load required libraries
+library(gbm)
+library(dplyr)
+library(caret)
 
-# ✅ Make Predictions
-gbm_preds_prob <- predict(gbm_model, newdata = test_x_selected, n.trees = 500, type = "response")
+# Debugging function to check and convert target variable
+prepare_target_variable <- function(target_var) {
+  # Check if target_var is NULL or has zero length
+  if (is.null(target_var) || length(target_var) == 0) {
+    stop("Target variable is NULL or empty")
+  }
+  
+  # If already a factor, return as-is
+  if (is.factor(target_var)) {
+    return(target_var)
+  }
+  
+  # Try converting to factor
+  tryCatch({
+    # First, handle different possible input types
+    if (is.character(target_var)) {
+      # Remove any leading/trailing whitespace
+      target_var <- trimws(target_var)
+      
+      # Convert to factor
+      return(as.factor(target_var))
+    } else if (is.numeric(target_var)) {
+      # If numeric, convert to factor
+      return(as.factor(as.character(target_var)))
+    } else {
+      # Attempt generic conversion
+      return(as.factor(as.character(target_var)))
+    }
+  }, error = function(e) {
+    stop(paste("Cannot convert target variable to factor:", e$message))
+  })
+}
 
-# ✅ Convert probabilities to class labels
-gbm_preds_class <- apply(gbm_preds_prob, 1, which.max)
-gbm_preds <- factor(levels(train_y_safe)[gbm_preds_class], levels = levels(train_y_safe))
+# Preprocessing function
+preprocess_data <- function(data, target_col_name) {
+  # Create a copy of the data to avoid modifying the original
+  processed_data <- data.frame(data)
+  
+  # Prepare target variable
+  processed_data[[target_col_name]] <- prepare_target_variable(processed_data[[target_col_name]])
+  
+  # Remove any columns that can't be used in the model
+  # Keep only numeric and factor columns
+  keep_cols <- sapply(processed_data, function(x) is.numeric(x) | is.factor(x))
+  processed_data <- processed_data[, keep_cols]
+  
+  return(processed_data)
+}
 
-# ✅ Compute Accuracy
-gbm_accuracy <- mean(gbm_preds == test_y)
-print(paste("GBM Accuracy:", round(gbm_accuracy, 4)))
+# Main modeling function
+run_gbm_classification <- function(data, target_col_name) {
+  # Preprocess the data
+  processed_data <- preprocess_data(data, target_col_name)
+  
+  # Separate features and target
+  target <- processed_data[[target_col_name]]
+  features <- processed_data[, names(processed_data) != target_col_name]
+  
+  # Determine distribution type
+  distribution_type <- if(length(levels(target)) > 2) "multinomial" else "bernoulli"
+  
+  # Split the data
+  set.seed(123)
+  train_index <- createDataPartition(target, p = 0.8, list = FALSE)
+  
+  train_x <- features[train_index, ]
+  train_y <- target[train_index]
+  test_x <- features[-train_index, ]
+  test_y <- target[-train_index]
+  
+  # Combine features and target for gbm formula
+  train_data <- cbind(train_x, target = train_y)
+  
+  # Fit GBM model
+  gbm_model <- gbm(
+    formula = target ~ .,
+    data = train_data,
+    distribution = distribution_type,
+    n.trees = 500,
+    interaction.depth = 4,
+    shrinkage = 0.01,
+    cv.folds = 5,
+    n.minobsinnode = 10,
+    verbose = TRUE
+  )
+  
+  # Find optimal number of trees
+  best_trees <- gbm.perf(gbm_model, method = "cv")
+  
+  # Predict
+  gbm_preds_prob <- predict(gbm_model, newdata = test_x, n.trees = best_trees, type = "response")
+  
+  # Convert probabilities to predictions
+  if(distribution_type == "multinomial") {
+    gbm_preds_class <- apply(gbm_preds_prob, 1, which.max)
+    gbm_preds <- factor(levels(train_y)[gbm_preds_class], levels = levels(train_y))
+  } else {
+    gbm_preds <- factor(ifelse(gbm_preds_prob > 0.5, levels(train_y)[2], levels(train_y)[1]), 
+                        levels = levels(train_y))
+  }
+  
+  # Compute and print results
+  gbm_accuracy <- mean(gbm_preds == test_y)
+  print(paste("GBM Accuracy:", round(gbm_accuracy, 4)))
+  
+  # Confusion Matrix
+  conf_matrix <- confusionMatrix(gbm_preds, test_y)
+  print(conf_matrix)
+  
+  return(list(
+    model = gbm_model,
+    predictions = gbm_preds,
+    accuracy = gbm_accuracy,
+    confusion_matrix = conf_matrix
+  ))
+}
 
 
+result <- run_gbm_classification(model_data_filtered, "transgender_civil_dc")
 ```
-The Gradient Boosting Machine (GBM) model achieved an accuracy of 0.5262, performing worse than other models, likely due to overfitting and suboptimal parameter tuning. 
+
+The Gradient Boosting Machine (GBM) model achieved an accuracy of 0.5262, performing worse than other models, likely due to overfitting and suboptimal parameter tuning.
 
 # Ensemble Method
 
 ```{r}
-print("Creating ensemble predictions...")
 
-# Convert models to probability outputs
-rf_preds_prob <- predict(rf_cv, newdata = test_x, type = "prob")
-xgb_preds_prob <- predict(xgb_model, newdata = xgb_test)
-gbm_preds_prob <- predict(gbm_model, newdata = test_x, n.trees = best_iter, type = "response")
 
-# Average probability predictions
-ensemble_preds_prob <- (rf_preds_prob + xgb_preds_prob + gbm_preds_prob) / 3
-ensemble_preds <- ifelse(ensemble_preds_prob > 0.5, "Yes", "No")
-ensemble_accuracy <- mean(ensemble_preds == test_y)
+# Enhanced Probability Normalization
+normalize_predictions <- function(probs) {
+  # Check for different possible input types
+  if (is.null(probs)) {
+    stop("Prediction input is NULL")
+  }
+  
+  # Handle matrix with 'Yes'/'No' columns
+  if (is.matrix(probs) && all(c("Yes", "No") %in% colnames(probs))) {
+    return(probs[, "Yes"])
+  }
+  
+  # Handle matrix with 2 columns
+  if (is.matrix(probs) && ncol(probs) == 2) {
+    return(probs[, 2])  # Assume second column is the positive class
+  }
+  
+  # Handle matrix with multiple columns (likely multi-class)
+  if (is.matrix(probs) && ncol(probs) > 2) {
+    return(probs[, 1])  # Default to first column
+  }
+  
+  # Handle vector of probabilities
+  if (is.vector(probs) && is.numeric(probs)) {
+    return(probs)
+  }
+  
+  # If we've made it this far, we can't normalize
+  stop(paste("Cannot normalize probabilities. ",
+             "Unexpected type: ", class(probs), 
+             ", Columns: ", 
+             ifelse(is.matrix(probs), ncol(probs), "N/A"),
+             ", Columns names: ", 
+             ifelse(is.matrix(probs), 
+                    paste(colnames(probs), collapse=", "), 
+                    "N/A")))
+}
 
-print(paste("Ensemble Accuracy:", round(ensemble_accuracy, 4)))
+# Comprehensive Ensemble Prediction Function
+ensemble_predictions <- function(rf_probs, xgb_probs, gbm_probs, test_y) {
+  # Normalize predictions
+  rf_yes_probs <- normalize_predictions(rf_probs)
+  xgb_yes_probs <- normalize_predictions(xgb_probs)
+  gbm_yes_probs <- normalize_predictions(gbm_probs)
+  
+  # Ensure consistent length
+  if (!(length(rf_yes_probs) == length(xgb_yes_probs) && 
+        length(rf_yes_probs) == length(gbm_yes_probs))) {
+    stop("Prediction vectors have different lengths")
+  }
+  
+  # Average probabilities
+  ensemble_preds_prob <- (rf_yes_probs + xgb_yes_probs + gbm_yes_probs) / 3
+  
+  # Convert to class predictions
+  ensemble_preds <- ifelse(ensemble_preds_prob > 0.5, "Yes", "No")
+  
+  # Compute accuracy
+  ensemble_accuracy <- mean(ensemble_preds == test_y)
+  
+  return(list(
+    probabilities = ensemble_preds_prob,
+    predictions = ensemble_preds,
+    accuracy = ensemble_accuracy
+  ))
+}
+
+# Diagnostic Function
+diagnose_predictions <- function(rf_probs, xgb_probs, gbm_probs) {
+  # Random Forest Predictions
+  cat("Random Forest Predictions:\n")
+  cat("Class:", class(rf_probs), "\n")
+  cat("Type:", typeof(rf_probs), "\n")
+  cat("Dimensions:", 
+      ifelse(is.matrix(rf_probs) || is.data.frame(rf_probs), 
+             paste(nrow(rf_probs), "x", ncol(rf_probs)), 
+             "N/A"), "\n")
+  if (is.matrix(rf_probs) || is.data.frame(rf_probs)) {
+    cat("Column names:", paste(colnames(rf_probs), collapse=", "), "\n")
+  }
+  cat("First few values:\n")
+  print(head(rf_probs))
+  
+  # Repeat for XGB and GBM
+  cat("\nXGBoost Predictions:\n")
+  cat("Class:", class(xgb_probs), "\n")
+  cat("Type:", typeof(xgb_probs), "\n")
+  cat("Dimensions:", 
+      ifelse(is.matrix(xgb_probs) || is.data.frame(xgb_probs), 
+             paste(nrow(xgb_probs), "x", ncol(xgb_probs)), 
+             "N/A"), "\n")
+  if (is.matrix(xgb_probs) || is.data.frame(xgb_probs)) {
+    cat("Column names:", paste(colnames(xgb_probs), collapse=", "), "\n")
+  }
+  cat("First few values:\n")
+  print(head(xgb_probs))
+  
+  cat("\nGBM Predictions:\n")
+  cat("Class:", class(gbm_probs), "\n")
+  cat("Type:", typeof(gbm_probs), "\n")
+  cat("Dimensions:", 
+      ifelse(is.matrix(gbm_probs) || is.data.frame(gbm_probs), 
+             paste(nrow(gbm_probs), "x", ncol(gbm_probs)), 
+             "N/A"), "\n")
+  if (is.matrix(gbm_probs) || is.data.frame(gbm_probs)) {
+    cat("Column names:", paste(colnames(gbm_probs), collapse=", "), "\n")
+  }
+  cat("First few values:\n")
+  print(head(gbm_probs))
+}
+
+# Run diagnostics
+print("Diagnosing prediction formats...")
+diagnose_predictions(rf_cv, xgb_accuracy, result)
+
+# Attempt ensemble predictions
+print("\nCreating ensemble predictions...")
+ensemble_result <- ensemble_predictions(
+  rf_cv, 
+  xgb_accuracy, 
+  result, 
+  test_y
+)
+
+# Print results
+print(paste("Ensemble Accuracy:", round(ensemble_result$accuracy, 4)))
+
 ```
+
 The Ensemble Model underperformed with an accuracy of 0.3766, failing to improve upon individual models. This suggests that the combined predictions did not provide additional value, likely due to weak base models or misalignment in their decision boundaries. Effective ensembling typically requires diverse and well-calibrated models, and in this case, the high-performing models may have dominated while lower-performing ones introduced noise. Further optimization, such as adjusting model weights or incorporating more diverse classifiers, may be needed to enhance ensemble effectiveness.
 
 # Model Comparison
@@ -414,11 +671,9 @@ The Ensemble Model underperformed with an accuracy of 0.3766, failing to improve
 ```{r}
 results <- data.frame(
   Model = c("Random Forest", "Multinomial Logistic", "Decision Tree", 
-            "XGBoost", "KNN", "Gradient Boosting", "Ensemble"),
+            "XGBoost", "Gradient Boosting", "Ensemble"),
   Accuracy = c(rf_accuracy, logit_accuracy, dt_accuracy, 
-               xgb_accuracy, knn_accuracy, 
-               gbm_accuracy, ensemble_accuracy)
-)
+               xgb_accuracy,gbm_accuracy, ensemble_accuracy))
 
 # Sort by accuracy
 results <- results[order(-results$Accuracy), ]
@@ -426,7 +681,7 @@ print("Final Model Performance:")
 print(results)
 ```
 
-The results indicate that Random Forest and Multinomial Logistic Regression achieved perfect accuracy (1.000), which is highly suspicious and suggests potential overfitting or data leakage. These models may have inadvertently learned patterns specific to the training data rather than generalizable decision rules. K-Nearest Neighbors (KNN) performed well with an accuracy of 0.721, followed by XGBoost at 0.629, and Decision Tree at 0.609, both of which offered moderate predictive power. Gradient Boosting (GBM) had a significantly lower accuracy of 0.526, possibly due to the known instability of the multinomial GBM implementation. The Ensemble Model, which combined multiple classifiers, failed to improve performance, achieving only 0.376, indicating that the individual models did not complement each other effectively. Given these results, KNN and XGBoost emerge as the most reliable models, balancing predictive accuracy without signs of overfitting, whereas Random Forest and Multinomial Logistic Regression require further validation to confirm their legitimacy.
+The results indicate that Random Forest and Multinomial Logistic Regression achieved perfect accuracy (1.000), which is highly suspicious and suggests potential overfitting or data leakage. These models may have inadvertently learned patterns specific to the training data rather than generalizable decision rules. XGBoost performed well with an accuracy of 0.629, and Decision Tree at 0.609, both of which offered moderate predictive power. Gradient Boosting (GBM) had a significantly lower accuracy of 0.526, possibly due to the known instability of the multinomial GBM implementation. The Ensemble Model, which combined multiple classifiers, failed to improve performance, achieving only 0.376, indicating that the individual models did not complement each other effectively. Given these results, XGBoost emerges as the most reliable model, balancing predictive accuracy without signs of overfitting, whereas Random Forest and Multinomial Logistic Regression require further validation to confirm their legitimacy.
 
 # Confusion Matrix for Best Model
 
@@ -440,7 +695,6 @@ best_model_preds <- switch(tolower(best_model_name),
                           "multinomial logistic" = logit_preds,
                           "decision tree" = dt_preds,
                           "xgboost" = xgb_preds,
-                          "knn" = knn_preds,
                           "gradient boosting" = gbm_preds,
                           "ensemble" = ensemble_final)
 
@@ -449,8 +703,8 @@ best_model_cm <- confusionMatrix(best_model_preds, test_y)
 print("Confusion Matrix for Best Model:")
 print(best_model_cm)
 ```
-The confusion matrix for the **Random Forest model** shows a perfect accuracy of **1.000**, meaning the model correctly classified every instance without a single error. Each class (**Yes, No, Don't Know**) has a sensitivity and specificity of **1.000**, indicating no false positives or false negatives. The **Kappa statistic of 1** further confirms that the model’s predictions are in perfect agreement with the actual labels. However, such perfect classification is highly unrealistic in real-world scenarios and suggests **overfitting or data leakage**, where the model has learned patterns that are overly specific to the training data rather than generalizing well. Further validation is required to ensure that the model is not unintentionally benefiting from unintended information in the dataset.
 
+The confusion matrix for the **Random Forest model** shows a perfect accuracy of **1.000**, meaning the model correctly classified every instance without a single error. Each class (**Yes, No, Don't Know**) has a sensitivity and specificity of **1.000**, indicating no false positives or false negatives. The **Kappa statistic of 1** further confirms that the model’s predictions are in perfect agreement with the actual labels. However, such perfect classification is highly unrealistic in real-world scenarios and suggests **overfitting or data leakage**, where the model has learned patterns that are overly specific to the training data rather than generalizing well. Further validation is required to ensure that the model is not unintentionally benefiting from unintended information in the dataset.
 
 # Feature Importance from Random Forest
 
