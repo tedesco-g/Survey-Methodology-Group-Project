@@ -11,6 +11,10 @@ toc-float: true
 
 # Final Assignment
 
+## Introduction
+
+Support for transgender rights varies widely across Europe, with Western Europe generally showing greater support and progressive policies compared to Eastern Europe. This project analyzes factors influencing public attitudes toward transgender individuals using data from the Special Eurobarometer 493 survey. We examine both individual-level factors (such as demographics, religion, and ideology) and country-level variables (including GDP, legal frameworks, and policy environments) to explain variations in support for transgender civil document changes. Additionally, we assess the role of education and healthcare in shaping public attitudes, recognizing their impact on inclusivity and policy acceptance. By integrating these structural and individual determinants, our goal is to develop a predictive model that forecasts support levels across different countries.
+
 ## Libraries
 
 ```{r, message = FALSE}
@@ -39,11 +43,11 @@ library(car)
 library(nnet)
 library(highcharter)
 library(scales)
-library(rpart)        # Decision Tree
-library(randomForest) # Random Forest
-library(pROC)         # For AUC-ROC evaluation
-library(xgboost)      # For XGBoost
-library(gbm)          # For Gradient Boosting
+library(rpart)
+library(randomForest)
+library(pROC)
+library(xgboost)
+library(gbm)
 library(MLmetrics)
 library(smotefamily)
 library(fastDummies)
@@ -110,7 +114,7 @@ First, we identified and removed columns that had more than 50% missing values, 
 
 Then, we removed constant columns, which do not provide useful information for the analysis, since they lack variability. To identify constant columns, we checked each column for the number of unique values and filtered out those that only had one unique value. This step ensures that the data set contains only columns that offer meaningful variation and are more useful for analysis.
 
-### Formatting and more…
+### Formatting and more
 
 ```{r}
 numeric_data <- data_clean[, sapply(data_clean, is.numeric)]
@@ -767,17 +771,23 @@ hcmap("custom/europe",
     style = list(fontSize = "14px", padding = "12px")
   ) %>%
   hc_chart(
-    width = 1200,  # Increase width for a broader view
-    height = 850   # Increase height to avoid squeezing the map
+    width = 550,  # Increase width for a broader view
+    height = 550, 
+    map= list(
+      zoom = 0.3,  # Daha uzak bir görünüm sağlar
+      center = list(latitude = 50, longitude = 10)  # Avrupa'nın merkezine odaklanır
+    )
   ) %>%
   hc_mapNavigation(
     enabled = TRUE,  # Allow zooming manually
     enableButtons = TRUE,  # Enable zoom control buttons
     enableMouseWheelZoom = FALSE  # Disable automatic mouse zoom for better control
   ) %>%
-  hc_title(text = "Transgender Civil DC Support Levels in Europe (Zoomed Out)")
+  hc_title(text = "Transgender Civil DC Support Levels in Europe")
 
 ```
+
+The map was customized with an interactive tooltips displaying detailed information for each country.
 
 ```{r}
 summary(final_data)
@@ -791,6 +801,8 @@ prop.table(table(final_data$transgender_civil_dc)) * 100
 We categorized respondents’ highest completed education levels according to the ISCED classification, grouping responses into categories such as pre-primary, primary, lower secondary, upper secondary, vocational, tertiary, and still studying. The dataset was processed to ensure that missing or unclear responses (“Refused/Don’t Know”) were treated separately. A summary table was created, aggregating the number of respondents per education level in each country, which was then merged with education spending data to explore possible trends.
 
 The visualization is a stacked column chart where each bar represents a country, and segments within the bars indicate the number of respondents who attained each education level. Different colors correspond to different education levels, making it easy to compare distributions across countries. The stacking approach allows us to see the total number of respondents per country while also distinguishing the proportion of each education level.
+
+The chart was customized with an interactive tooltips displaying detailed education level by country.
 
 ```{r}
 education_levels <- final_data %>%
@@ -1624,7 +1636,11 @@ print(rf_cv)
 
 ```
 
-The **Random Forest** results indicate that **mtry = 65** yielded perfect accuracy (1.000) across all folds, suggesting potential overfitting. Lower values of mtry (e.g., mtry = 2) resulted in a more realistic accuracy of 0.7633, with a kappa value of 0.564, indicating a moderately strong agreement. However, since the final model selected mtry = 65, this suggests that the model may be overfitting to the training data, capturing too much detail and reducing generalizability to new, unseen data.
+The Random Forest results indicate that **mtry = 114 and mtry = 226** both yielded perfect accuracy (**1.000**) across all folds, suggesting potential **overfitting**. Such high accuracy is highly unusual in real-world predictive modeling and may indicate that the model is memorizing the training data rather than learning generalizable patterns.
+
+In contrast, **mtry = 2** resulted in a more realistic accuracy of **0.7101**, with a **Kappa value of 0.4535**, indicating moderate agreement. This suggests that with a lower number of randomly selected predictors at each split, the model was more generalizable, though less precise.
+
+Since the final model selected **mtry = 114**, it suggests that the model is **overfitting** by capturing too much detail from the training data. While this might result in high accuracy during cross-validation, it is unlikely to generalize well to new, unseen data. Further validation on a separate test set is necessary to confirm the model’s real-world predictive performance. Reducing **mtry** or introducing regularization techniques may help improve generalizability.
 
 ### Multinomial Logistic Regression
 
@@ -1670,7 +1686,7 @@ print(paste("Basic Multinomial Logistic Accuracy:", round(basic_logit_accuracy, 
 
 ```
 
-**Multinomial Logistic** Regression achieved an accuracy of **0.6086**, demonstrating moderate predictive power in classifying support for transgender civil document changes. While it effectively captured some complex relationships in the data, it struggled with distinguishing cases in the "Don't Know" category, likely due to overlapping characteristics between groups. This suggests that additional feature engineering or alternative regularization techniques may improve its performance.
+**Multinomial Logistic** Regression achieved an accuracy of 0.6098, demonstrating moderate predictive power in classifying support for transgender civil document changes. While it effectively captured some complex relationships in the data, it struggled with distinguishing cases in the "Don't Know" category, likely due to overlapping characteristics between groups. This suggests that additional feature engineering or alternative regularization techniques may improve its performance.
 
 ### Decision Tree
 
@@ -1753,7 +1769,7 @@ print(paste("XGBoost Accuracy:", round(xgb_accuracy, 4)))
 
 ```
 
-The **XGBoost model** achieved an accuracy of **0.6296**, outperforming both Multinomial Logistic Regression and Decision Trees. Its boosted ensemble approach allows it to iteratively refine predictions, reducing bias and variance more effectively than standalone models. This suggests that XGBoost is better at capturing complex patterns in the data, though further tuning and feature engineering could potentially enhance its performance even more.
+The **XGBoost model** achieved an accuracy of 0.614, outperforming both Multinomial Logistic Regression and Decision Trees. Its boosted ensemble approach allows it to iteratively refine predictions, reducing bias and variance more effectively than standalone models. This suggests that XGBoost is better at capturing complex patterns in the data, though further tuning and feature engineering could potentially enhance its performance even more.
 
 ### Gradient Boosting Machine
 
@@ -1880,159 +1896,147 @@ result <- run_gbm_classification(model_data_filtered, "transgender_civil_dc")
 
 ```
 
-The Gradient Boosting Machine (GBM) model achieved an accuracy of 0.5262, performing worse than other models, likely due to overfitting and suboptimal parameter tuning.
+The Gradient Boosting Machine (GBM) model achieved an accuracy of 0.6583, performing worse than other models, likely due to overfitting and suboptimal parameter tuning.
 
 ### Ensemble Method
 
 ```{r}
-# Enhanced Probability Normalization
-normalize_predictions <- function(probs) {
-  # Check for different possible input types
-  if (is.null(probs)) {
-    stop("Prediction input is NULL")
+# Preprocess the data
+# Ensure the train/test data is already split and preprocessed (as in previous steps)
+train_x_selected_numeric <- train_x_selected
+test_x_selected_numeric <- test_x_selected
+
+# Convert all columns to numeric if they are factors or characters
+for(col in names(train_x_selected_numeric)) {
+  if(is.factor(train_x_selected_numeric[[col]]) || is.character(train_x_selected_numeric[[col]])) {
+    train_x_selected_numeric[[col]] <- as.numeric(as.factor(train_x_selected_numeric[[col]]))
   }
-  
-  # Handle matrix with 'Yes'/'No' columns
-  if (is.matrix(probs) && all(c("Yes", "No") %in% colnames(probs))) {
-    return(probs[, "Yes"])
-  }
-  
-  # Handle matrix with 2 columns
-  if (is.matrix(probs) && ncol(probs) == 2) {
-    return(probs[, 2])  # Assume second column is the positive class
-  }
-  
-  # Handle matrix with multiple columns (likely multi-class)
-  if (is.matrix(probs) && ncol(probs) > 2) {
-    return(probs[, 1])  # Default to first column
-  }
-  
-  # Handle vector of probabilities
-  if (is.vector(probs) && is.numeric(probs)) {
-    return(probs)
-  }
-  
-  # If we've made it this far, we can't normalize
-  stop(paste("Cannot normalize probabilities. ",
-             "Unexpected type: ", class(probs), 
-             ", Columns: ", 
-             ifelse(is.matrix(probs), ncol(probs), "N/A"),
-             ", Columns names: ", 
-             ifelse(is.matrix(probs), 
-                    paste(colnames(probs), collapse=", "), 
-                    "N/A")))
 }
 
-# Comprehensive Ensemble Prediction Function
-ensemble_predictions <- function(rf_probs, xgb_probs, gbm_probs, test_y) {
-  # Normalize predictions
-  rf_yes_probs <- normalize_predictions(rf_probs)
-  xgb_yes_probs <- normalize_predictions(xgb_probs)
-  gbm_yes_probs <- normalize_predictions(gbm_probs)
-  
-  # Ensure consistent length
-  if (!(length(rf_yes_probs) == length(xgb_yes_probs) && 
-        length(rf_yes_probs) == length(gbm_yes_probs))) {
-    stop("Prediction vectors have different lengths")
+for(col in names(test_x_selected_numeric)) {
+  if(is.factor(test_x_selected_numeric[[col]]) || is.character(test_x_selected_numeric[[col]])) {
+    test_x_selected_numeric[[col]] <- as.numeric(as.factor(test_x_selected_numeric[[col]]))
   }
-  
-  # Average probabilities
-  ensemble_preds_prob <- (rf_yes_probs + xgb_yes_probs + gbm_yes_probs) / 3
-  
-  # Convert to class predictions
-  ensemble_preds <- ifelse(ensemble_preds_prob > 0.5, "Yes", "No")
-  
-  # Compute accuracy
-  ensemble_accuracy <- mean(ensemble_preds == test_y)
-  
-  return(list(
-    probabilities = ensemble_preds_prob,
-    predictions = ensemble_preds,
-    accuracy = ensemble_accuracy
-  ))
 }
 
-# Diagnostic Function
-diagnose_predictions <- function(rf_probs, xgb_probs, gbm_probs) {
-  # Random Forest Predictions
-  cat("Random Forest Predictions:\n")
-  cat("Class:", class(rf_probs), "\n")
-  cat("Type:", typeof(rf_probs), "\n")
-  cat("Dimensions:", 
-      ifelse(is.matrix(rf_probs) || is.data.frame(rf_probs), 
-             paste(nrow(rf_probs), "x", ncol(rf_probs)), 
-             "N/A"), "\n")
-  if (is.matrix(rf_probs) || is.data.frame(rf_probs)) {
-    cat("Column names:", paste(colnames(rf_probs), collapse=", "), "\n")
-  }
-  cat("First few values:\n")
-  print(head(rf_probs))
-  
-  # Repeat for XGB and GBM
-  cat("\nXGBoost Predictions:\n")
-  cat("Class:", class(xgb_probs), "\n")
-  cat("Type:", typeof(xgb_probs), "\n")
-  cat("Dimensions:", 
-      ifelse(is.matrix(xgb_probs) || is.data.frame(xgb_probs), 
-             paste(nrow(xgb_probs), "x", ncol(xgb_probs)), 
-             "N/A"), "\n")
-  if (is.matrix(xgb_probs) || is.data.frame(xgb_probs)) {
-    cat("Column names:", paste(colnames(xgb_probs), collapse=", "), "\n")
-  }
-  cat("First few values:\n")
-  print(head(xgb_probs))
-  
-  cat("\nGBM Predictions:\n")
-  cat("Class:", class(gbm_probs), "\n")
-  cat("Type:", typeof(gbm_probs), "\n")
-  cat("Dimensions:", 
-      ifelse(is.matrix(gbm_probs) || is.data.frame(gbm_probs), 
-             paste(nrow(gbm_probs), "x", ncol(gbm_probs)), 
-             "N/A"), "\n")
-  if (is.matrix(gbm_probs) || is.data.frame(gbm_probs)) {
-    cat("Column names:", paste(colnames(gbm_probs), collapse=", "), "\n")
-  }
-  cat("First few values:\n")
-  print(head(gbm_probs))
-}
-
-# Run diagnostics
-print("Diagnosing prediction formats...")
-diagnose_predictions(rf_cv, xgb_accuracy, result)
-
-# Attempt ensemble predictions
-print("\nCreating ensemble predictions...")
-ensemble_result <- ensemble_predictions(
-  rf_cv, 
-  xgb_accuracy, 
-  result, 
-  test_y
+# Train Random Forest Model
+rf_model <- randomForest(
+  x = train_x_selected_numeric, 
+  y = train_y, 
+  ntree = 100, 
+  importance = TRUE
 )
 
-# Print results
+# Train XGBoost Model
+xgb_train <- xgb.DMatrix(data = as.matrix(train_x_selected_numeric), label = as.integer(train_y) - 1)
+xgb_test <- xgb.DMatrix(data = as.matrix(test_x_selected_numeric))
+
+xgb_model <- xgb.train(
+  params = list(
+    objective = "multi:softmax",
+    num_class = 3,
+    eta = 0.03,
+    max_depth = 6
+  ),
+  data = xgb_train,
+  nrounds = 200
+)
+
+# Train GBM Model
+gbm_model <- gbm(
+  formula = train_y ~ ., 
+  data = cbind(train_x_selected_numeric, train_y = train_y), 
+  distribution = "multinomial", 
+  n.trees = 500, 
+  interaction.depth = 4, 
+  shrinkage = 0.01, 
+  cv.folds = 5
+)
+
+# Get predictions (probabilities) from each model
+rf_preds_prob <- predict(rf_model, newdata = test_x_selected_numeric, type = "prob")
+xgb_preds_prob <- predict(xgb_model, newdata = xgb_test, type = "response")
+gbm_preds_prob <- predict(gbm_model, newdata = test_x_selected_numeric, n.trees = gbm.perf(gbm_model, method = "cv"), type = "response")
+
+# Check that all models' prediction lengths match
+print(length(rf_preds_prob))  # Should match length of test data
+print(length(xgb_preds_prob))  # Should match length of test data
+print(length(gbm_preds_prob))  # Should match length of test data
+
+# Normalize the predictions to ensure the same length and format
+normalize_predictions <- function(probs) {
+  # If probabilities are a matrix and represent classes
+  if (is.matrix(probs)) {
+    return(probs[, 1])  # Assuming first column represents the class of interest (e.g., "Yes")
+  } 
+  return(probs)  # If it's already a vector, return as is
+}
+
+# Normalize predictions
+rf_yes_probs <- normalize_predictions(rf_preds_prob)
+xgb_yes_probs <- normalize_predictions(xgb_preds_prob)
+gbm_yes_probs <- normalize_predictions(gbm_preds_prob)
+
+
+# Average the probabilities from each model
+ensemble_preds_prob <- (rf_yes_probs + xgb_yes_probs + gbm_yes_probs) / 3
+
+# Convert the averaged probabilities to class labels
+ensemble_preds <- factor(
+  ifelse(ensemble_preds_prob > 0.5, "Yes", "No"),
+  levels = levels(test_y)
+)
+
+# Calculate accuracy of the ensemble model
+ensemble_accuracy <- mean(ensemble_preds == test_y)
+
+# Return results
+ensemble_result <- list(
+  probabilities = ensemble_preds_prob,
+  predictions = ensemble_preds,
+  accuracy = ensemble_accuracy
+)
+
+# Print ensemble accuracy
 print(paste("Ensemble Accuracy:", round(ensemble_result$accuracy, 4)))
+
+# Optionally, you can return the ensemble result
+ensemble_result
 
 ```
 
-The Ensemble Model underperformed with an accuracy of 0.3766, failing to improve upon individual models. This suggests that the combined predictions did not provide additional value, likely due to weak base models or misalignment in their decision boundaries. Effective ensembling typically requires diverse and well-calibrated models, and in this case, the high-performing models may have dominated while lower-performing ones introduced noise. Further optimization, such as adjusting model weights or incorporating more diverse classifiers, may be needed to enhance ensemble effectiveness.
+The Ensemble Model underperformed with an accuracy of 0.41409, failing to improve upon individual models. This suggests that the combined predictions did not provide additional value, likely due to weak base models or misalignment in their decision boundaries. Effective ensembling typically requires diverse and well-calibrated models, and in this case, the high-performing models may have dominated while lower-performing ones introduced noise. Further optimization, such as adjusting model weights or incorporating more diverse classifiers, may be needed to enhance ensemble effectiveness.
 
 ## Model Comparison
 
 ```{r}
+# If rf_cv is a model, you might need to extract accuracy differently
+rf_accuracy <- rf_cv$results$Accuracy[which.max(rf_cv$results$Accuracy)]
+
+# Create results dataframe with confirmed accuracy values
 results <- data.frame(
   Model = c("Random Forest", "Multinomial Logistic", "Decision Tree", 
             "XGBoost", "Gradient Boosting", "Ensemble"),
-  Accuracy = c(rf_accuracy, logit_accuracy, dt_accuracy, 
-               xgb_accuracy,gbm_accuracy, ensemble_accuracy))
+  Accuracy = c(
+    rf_accuracy,  # Use the max accuracy from rf_cv
+    basic_logit_accuracy, 
+    dt_accuracy, 
+    xgb_accuracy,  # Ensure this is the correct accuracy value
+    result$accuracy,  # For Gradient Boosting
+    ensemble_result$accuracy  # For Ensemble
+  )
+)
 
-# Sort by accuracy
+# Sort by accuracy in descending order
 results <- results[order(-results$Accuracy), ]
+
+# Print final model performance
 print("Final Model Performance:")
 print(results)
 
 ```
 
-The results indicate that Random Forest and Multinomial Logistic Regression achieved perfect accuracy (1.000), which is highly suspicious and suggests potential overfitting or data leakage. These models may have inadvertently learned patterns specific to the training data rather than generalizable decision rules. XGBoost performed well with an accuracy of 0.629, and Decision Tree at 0.609, both of which offered moderate predictive power. Gradient Boosting (GBM) had a significantly lower accuracy of 0.526, possibly due to the known instability of the multinomial GBM implementation. The Ensemble Model, which combined multiple classifiers, failed to improve performance, achieving only 0.376, indicating that the individual models did not complement each other effectively. Given these results, XGBoost emerges as the most reliable model, balancing predictive accuracy without signs of overfitting, whereas Random Forest and Multinomial Logistic Regression require further validation to confirm their legitimacy.
+The results indicate that Random Forest achieved perfect accuracy (1.000), which is highly suspicious and suggests potential overfitting or data leakage. This likely means the model has learned patterns specific to the training data rather than generalizable decision rules. Gradient Boosting performed best among the remaining models with an accuracy of 0.658, followed by XGBoost (0.614), Multinomial Logistic Regression (0.610), and Decision Tree (0.609), all of which provided moderate predictive power. The Ensemble Model, which aimed to combine multiple classifiers, performed the worst, achieving only 0.414, suggesting that the individual models did not complement each other effectively. Given these results, Gradient Boosting appears to be the most reliable model, offering the highest accuracy without extreme overfitting concerns. Meanwhile, Random Forest requires further investigation to determine whether its performance is legitimate or the result of data leakage.
 
 ## Confusion Matrix for Best Model
 
@@ -2040,14 +2044,29 @@ The results indicate that Random Forest and Multinomial Logistic Regression achi
 best_model_name <- as.character(results$Model[1])
 print(paste("Best model is:", best_model_name))
 
+# Get the best model name
+best_model_name <- as.character(results$Model[1])
+print(paste("Best model is:", best_model_name))
+
 # Get the predictions from the best model
 best_model_preds <- switch(tolower(best_model_name),
-                          "random forest" = rf_preds,
-                          "multinomial logistic" = logit_preds,
-                          "decision tree" = dt_preds,
-                          "xgboost" = xgb_preds,
-                          "gradient boosting" = gbm_preds,
-                          "ensemble" = ensemble_final)
+  "random forest" = if(is.matrix(rf_preds_prob)) apply(rf_preds_prob, 1, function(x) levels(test_y)[which.max(x)]) else rf_preds_prob,
+  "multinomial logistic" = basic_logit_preds,
+  "decision tree" = dt_preds,
+  "xgboost" = if(is.matrix(xgb_preds)) apply(xgb_preds, 1, function(x) levels(test_y)[which.max(x)]) else xgb_preds,
+  "gradient boosting" = if(is.matrix(gbm_preds_prob)) apply(gbm_preds_prob, 1, function(x) levels(test_y)[which.max(x)]) else gbm_preds_prob,
+  "ensemble" = ensemble_result$predictions
+)
+
+# Ensure best_model_preds is a factor with the same levels as test_y
+best_model_preds <- factor(best_model_preds, levels = levels(test_y))
+
+# Ensure consistent length
+if (length(best_model_preds) != length(test_y)) {
+  min_length <- min(length(best_model_preds), length(test_y))
+  best_model_preds <- best_model_preds[1:min_length]
+  test_y <- test_y[1:min_length]
+}
 
 # Create confusion matrix
 best_model_cm <- confusionMatrix(best_model_preds, test_y)
@@ -2074,33 +2093,43 @@ print(head(importance_df, 20))
 
 The Random Forest feature importance analysis ranks variables based on their contribution to model predictions, measured by the Mean Decrease in Gini index. A higher value indicates greater importance in distinguishing between classes.
 
-transgender_civil_dc1 stands out with an extremely high importance score (8794.04), significantly surpassing all other variables. This suggests that the model heavily relies on this feature for classification. If this variable is directly related to the target variable, it may indicate data leakage and should be reviewed carefully.
+**transgender_civil_dc1** stands out with an extremely high importance score (8732.46), vastly surpassing all other variables. This suggests that the model heavily relies on this feature for classification. If this variable is directly related to the target variable, it may indicate potential data leakage and should be reviewed carefully.
 
-Other top predictors include school_div_transgender (312.16), school_div_intersex (288.73), and school_div_sexual_orientation (223.55). These variables reflect attitudes and policies toward transgender inclusion in schools, indicating their strong influence on predicting support for civil document changes.
+Other top predictors include **school_div_transgender (356.50), school_div_sexual_orientation (266.35), and school_div_intersex (233.39)**. These variables reflect attitudes and policies toward transgender inclusion in schools, indicating their strong influence on predicting support for civil document changes.
 
-iso3c (253.51), representing the country identifier, also ranks high. This suggests that national-level factors may play a substantial role in shaping opinions on transgender civil rights.
+**Serial ID (233.87)** ranking high raises concerns, as this variable should not typically influence predictions. If this is an index or unique identifier, it may introduce unintended biases.
 
-Legal and medical policies such as div_req (150.85) (divorce requirements) and med_interven (137.73) (medical intervention requirements) also contribute significantly, suggesting that institutional barriers may strongly correlate with support levels.
+Legal and medical policies such as **med_interven (144.41)** (medical intervention requirements) also contribute significantly, suggesting that institutional barriers may strongly correlate with support levels.
 
-Social and political factors, including transdiscr (102.79) (transgender discrimination), interdiscr (87.87) (intersectional discrimination), sexdiscr (77.13) (sex-based discrimination), and ideo (70.00) (political ideology), further indicate that broader socio-political beliefs impact support for transgender rights.
+Social and political factors, including **interdiscr (88.43)** (intersectional discrimination), **transdiscr (79.25)** (transgender discrimination), **sexdiscr (71.53)** (sex-based discrimination), and **ideo (68.88)** (political ideology), further indicate that broader socio-political beliefs impact support for transgender rights.
 
-Education-related variables, such as age_edu (82.64), age_edu_5cat (58.87), and natvoice (50.87) (national political voice), show moderate importance, suggesting that educational attainment and civic engagement play a role in shaping perspectives.
+Education-related variables, such as **age_edu (79.59), age_edu_5cat (54.71), and natvoice (50.26)** (national political voice), show moderate importance, suggesting that educational attainment and civic engagement play a role in shaping perspectives.
+
+**Country (60.37) and iso3c (55.58)** ranking relatively high suggests that national-level factors may play a substantial role in shaping opinions on transgender civil rights.
+
+Overall, the results highlight the strong influence of legal, educational, and social discrimination factors in shaping attitudes toward transgender civil rights. However, the extremely high importance of **transgender_civil_dc1** and the presence of **serialid** among top features warrant further investigation to rule out data leakage or unintended biases.
 
 ## Conclusion
 
-The feature importance analysis from the Random Forest model highlights key drivers influencing support for transgender civil document changes. The overwhelming weight of **transgender_civil_dc1** raises concerns about **potential data leakage**, warranting further investigation to ensure model integrity. Beyond this, the findings underscore the significant role of **school policies, national identity, and legal/medical barriers**, indicating that institutional frameworks heavily shape public attitudes on this issue. Additionally, **discrimination factors and ideological beliefs** emerge as critical predictors, reflecting broader societal and cultural dynamics. While **education and political engagement** hold moderate influence, they remain relevant in shaping perspectives on transgender rights. These insights provide a strong foundation for refining predictive models and deepening our understanding of the factors that drive public opinion on transgender civil rights.
+This project analyzed the factors influencing support for transgender rights across Europe and developed a predictive model to forecast support levels in other countries. Individual-level analysis revealed that gender and religion are key drivers, with women and non-believers showing higher support, while political ideology has a lesser impact. Country-level findings showed that legal frameworks and healthcare access shape public attitudes more than economic factors like GDP. Our predictive modeling highlighted the strength of Random Forest, Multinomial Logistic Regression, Decision Trees, and XGBoost, though concerns about Random Forest overfitting were noted. Feature importance analysis emphasized the role of transgender civil document policies, school inclusion measures, legal and medical requirements, and discrimination factors in shaping opinions. The overwhelming weight of transgender_civil_dc1 raised potential data leakage concerns, requiring further validation. These findings underscore the complex interplay of individual beliefs, institutional policies, and societal norms in shaping support for transgender rights and highlight the need for rigorous model refinement to enhance predictive accuracy.
+
+Based on the Gradient Boosting Machine (GBM) model's predictions, the estimated level of support for the transgender rights policy in country X would depend on its similarity to the countries in the training dataset. Since the model's overall accuracy is 65.83%, and its class-wise sensitivity for "Yes" (support) is 82.61%, we can approximate the probability of support by considering the class distributions.
+
+From the confusion matrix and class prevalence rates, the model suggests:
+
+52.57% of countries in the dataset support trans rights. 35.83% do not support it. 11.6% are uncertain (Don't Know). If country X closely aligns with countries in the dataset that exhibit strong support, we can estimate that the probability of support is around 50-55%. However, given the model's bias toward overpredicting "Yes" and underpredicting "Don't Know," a more conservative estimate would be a 45-50% probability of policy support.
 
 ## References
 
-Asher & Lyric. (2023, August 8). Global Trans Rights Index: 203 countries ranked in 2023.[ https://www.asherfergusson.com/global-trans-rights-index/](https://www.asherfergusson.com/global-trans-rights-index/)
+Asher & Lyric. (2023, August 8). Global Trans Rights Index: 203 countries ranked in 2023.<https://www.asherfergusson.com/global-trans-rights-index/>
 
-European Institute for Gender Equality. (n.d.). Culture.[ https://eige.europa.eu/gender-mainstreaming/policy-areas/culture?language_content_entity=en](https://eige.europa.eu/gender-mainstreaming/policy-areas/culture?language_content_entity=en)
+European Institute for Gender Equality. (n.d.). Culture.<https://eige.europa.eu/gender-mainstreaming/policy-areas/culture?language_content_entity=en>
 
 Garrido, M. (2025, March 4). The 15 Countries with the Best Education: 2025 ranking. Global Citizen Solutions. <https://www.globalcitizensolutions.com/countries-with-best-education/> 
 
-ILGA-Europe. (n.d.). Legal gender recognition - Rainbow Map.[ https://rainbowmap.ilga-europe.org/categories/legal-gender-recognition/#:\~\\:text=Legal%20gender%20recognition%20is%20based,only%20in%20Germany%20and%20Iceland](https://rainbowmap.ilga-europe.org/categories/legal-gender-recognition/#:~%5C:text=Legal%20gender%20recognition%20is%20based,only%20in%20Germany%20and%20Iceland)
+ILGA-Europe. (n.d.). Legal gender recognition - Rainbow Map.[https://rainbowmap.ilga-europe.org/categories/legal-gender-recognition/#:\~\\:text=Legal%20gender%20recognition%20is%20based,only%20in%20Germany%20and%20Iceland](https://rainbowmap.ilga-europe.org/categories/legal-gender-recognition/#:~%5C:text=Legal%20gender%20recognition%20is%20based,only%20in%20Germany%20and%20Iceland)
 
-TGEU - Transgender Europe. (2025, March 13). Homepage.[ https://tgeu.org/](https://tgeu.org/)
+TGEU - Transgender Europe. (2025, March 13). Homepage.<https://tgeu.org/>
 
 The Williams Institute at UCLA School of Law. (2022, January 25). The relationship between LGBT inclusion and Economic Development: Emerging Economies - Williams Institute. Williams Institute. <https://williamsinstitute.law.ucla.edu/publications/lgbt-inclusion-economic-dev/#:~:text=In%20particular%2C%20the%20analysis%20suggests,correlation%20with%20GDP%20per%20capita>. 
 
