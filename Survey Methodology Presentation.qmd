@@ -1,0 +1,61 @@
+---
+title: "Survey Methodology Presentation"
+format: revealjs
+editor: visual
+---
+
+## Introduction- Auuu
+
+Purpose of the project?
+
+## Data Handling- Ekin 
+
+What data did we use and why. Something specific to data cleaning
+
+How missing data was handled
+
+## Descriptive Analysis
+
+Voice Representation - Au
+
+Identity- Au
+
+Gender - Gender distribution for the whole survey -Au\
+\
+Demographics: Age- Education Distribution -Au
+
+School Diversity- Au
+
+Other variables- Au\
+\
+Highest Education Level Reached Per Country -Au
+
+Distribution of responses to QC19 - Au
+
+## Country- Level Data- Gina
+
+-   Economic Summary
+
+-   GDP vs Education expenditure
+
+-   Health Variables - Gina to develop this graph
+
+-   Legal Variables- Gina to develop this graph
+
+## Multicolinearity -Ekin
+
+Summary of Individual & Country- Final Data
+
+-   how do individual responses compare to country level data
+
+## Prediction Models- Gina
+
+what models were used and why + their results
+
+feature importance from random forest
+
+## Model Comparison and/ or Confusion matrix
+
+-   maybe a chart for cpomparison\
+
+## Conclusion
