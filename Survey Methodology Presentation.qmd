@@ -6,13 +6,25 @@ editor: visual
 
 ## Introduction- Auuu
 
-Purpose of the project?
+**Purpose of the project?**
 
-## Data Handling- Ekin 
+Our project explores the factors influencing public support for transgender rights across Europe, utilizing data from the Special Eurobarometer 493 survey. We found that support varies significantly, with Western Europe generally showing greater acceptance compared to Eastern Europe.
+
+Our analysis focuses on both individual-level factors, such as demographics, religion, and ideology, and country-level variables, including GDP, legal frameworks, and policy environments. By examining these factors, we aim to understand the variations in support for transgender civil document changes.
+
+Additionally, we assess the role of education and healthcare in shaping public attitudes, recognizing their impact on inclusivity and policy acceptance. Our goal is to develop a predictive model that can forecast support levels across different countries, integrating both structural and individual determinants.
+
+This project highlights the importance of understanding the multifaceted nature of public attitudes towards transgender rights and provides insights for policymakers and advocates working towards greater inclusivity.
+
+------------------------------------------------------------------------
+
+## Data Handling- Ekin
 
 What data did we use and why. Something specific to data cleaning
 
 How missing data was handled
+
+------------------------------------------------------------------------
 
 ## Descriptive Analysis
 
@@ -32,6 +44,8 @@ Highest Education Level Reached Per Country -Au
 
 Distribution of responses to QC19 - Au
 
+------------------------------------------------------------------------
+
 ## Country- Level Data- Gina
 
 -   Economic Summary
@@ -42,11 +56,15 @@ Distribution of responses to QC19 - Au
 
 -   Legal Variables- Gina to develop this graph
 
+------------------------------------------------------------------------
+
 ## Multicolinearity -Ekin
 
 Summary of Individual & Country- Final Data
 
 -   how do individual responses compare to country level data
+
+------------------------------------------------------------------------
 
 ## Prediction Models- Gina
 
@@ -54,8 +72,12 @@ what models were used and why + their results
 
 feature importance from random forest
 
+------------------------------------------------------------------------
+
 ## Model Comparison and/ or Confusion matrix
 
--   maybe a chart for cpomparison\
+-   maybe a chart for cpomparison
+
+------------------------------------------------------------------------
 
 ## Conclusion
