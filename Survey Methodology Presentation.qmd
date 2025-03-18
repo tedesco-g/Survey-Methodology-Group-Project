@@ -32,7 +32,7 @@ Highest Education Level Reached Per Country -Au
 
 Distribution of responses to QC19 - Au
 
-Country- Level Data- Gina
+## Country- Level Data- Gina
 
 -   Economic Summary
 
@@ -42,7 +42,7 @@ Country- Level Data- Gina
 
 -   Legal Variables- Gina to develop this graph
 
-Multicolinearity -Ekin
+## Multicolinearity -Ekin
 
 Summary of Individual & Country- Final Data
 
