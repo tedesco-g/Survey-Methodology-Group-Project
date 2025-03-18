@@ -4,6 +4,45 @@ format: revealjs
 editor: visual
 ---
 
+## Technical Things
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(haven)
+library(tidyverse)
+library(naniar)
+library(visdat)
+library(mice)
+library(GGally)
+library(corrplot)
+library(ggcorrplot)
+library(reshape2)
+library(readr)
+library(caret)
+library(dplyr)
+library(ggplot2)
+library(viridis)
+library(MASS)
+library(lme4)
+library(sjPlot)
+library(tidyr)
+library(patchwork)
+library(car)
+library(nnet)
+library(highcharter)
+library(scales)
+library(rpart)
+library(randomForest)
+library(pROC)
+library(xgboost)
+library(gbm)
+library(MLmetrics)
+library(smotefamily)
+library(fastDummies)
+
+```
+
+
+
+
 ## Introduction- Auuu
 
 **Purpose of the project?**
@@ -27,6 +66,7 @@ How missing data was handled
 ------------------------------------------------------------------------
 
 ## Descriptive Analysis
+### Individual-Level
 
 Voice Representation - Au
 
@@ -44,9 +84,16 @@ Highest Education Level Reached Per Country -Au
 
 Distribution of responses to QC19 - Au
 
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# Load necessary library
+library(ggplot2)
+
+```
+
+
 ------------------------------------------------------------------------
 
-## Country- Level Data- Gina
+### Country-Level - Gina
 
 -   Economic Summary
 
