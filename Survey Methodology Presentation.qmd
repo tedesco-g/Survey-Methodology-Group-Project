@@ -4,7 +4,14 @@ format: revealjs
 editor: visual
 ---
 
-## Technical Things
+## Introduction
+**The purpose of the project**
+
+★ Factors influencing public support for transgender rights across Europe
+
+★ Both individual-level factors (such as demographics, religion, and ideology), and country-level variables, (including GDP, legal frameworks, and policy environments).
+
+★ The role of education and healthcare in shaping public attitudes → predictive model that can forecast support levels across different countries
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 library(haven)
@@ -47,21 +54,9 @@ library(tidyr)
 
 ```
 
-## Introduction- Auuu
-
-**Purpose of the project?**
-
-Our project explores the factors influencing public support for transgender rights across Europe, utilizing data from the Special Eurobarometer 493 survey. We found that support varies significantly, with Western Europe generally showing greater acceptance compared to Eastern Europe.
-
-Our analysis focuses on both individual-level factors, such as demographics, religion, and ideology, and country-level variables, including GDP, legal frameworks, and policy environments. By examining these factors, we aim to understand the variations in support for transgender civil document changes.
-
-Additionally, we assess the role of education and healthcare in shaping public attitudes, recognizing their impact on inclusivity and policy acceptance. Our goal is to develop a predictive model that can forecast support levels across different countries, integrating both structural and individual determinants.
-
-This project highlights the importance of understanding the multifaceted nature of public attitudes towards transgender rights and provides insights for policymakers and advocates working towards greater inclusivity.
-
 ------------------------------------------------------------------------
 
-## Data Handling- Ekin
+## Data Handling
 
 **Data Sources**
 
@@ -91,12 +86,49 @@ This project highlights the importance of understanding the multifaceted nature 
 
 ------------------------------------------------------------------------
 
-------------------------------------------------------------------------
-
 ## Descriptive Analysis
 ### Individual-Level
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
+★ Educational Attainment
+
+★ Gender and Regional Differences
+
+  ☆ Responses to key questions, such as Question 19
+
+★ Attitudes Toward Diversity Education
+
+```{r, include = FALSE}
+final_data <-read_csv("data_cleaning_files/final_data.csv")
+
+final_data<- final_data[, -1]
+
+# Ensure final_data is a data frame
+final_data <- as.data.frame(final_data)
+
+# only variables with missing data for imputation
+impute_vars <- final_data %>% dplyr::select(`preprim_exp`, `prim_exp`, `lose_exp`, `upse_exp`, `voc_exp`)
+
+# Generate a predictor matrix
+predictorMatrix <- make.predictorMatrix(impute_vars)
+
+imputed_data <- mice(impute_vars, method = "mean", m = 5, maxit = 10, seed = 123)
+
+# Replace missing values with the first imputed dataset
+final_data <- final_data %>%
+  mutate(
+    preprim_exp = complete(imputed_data, 1)$preprim_exp,
+    prim_exp = complete(imputed_data, 1)$prim_exp,
+    lose_exp = complete(imputed_data, 1)$lose_exp,
+    upse_exp = complete(imputed_data, 1)$upse_exp,
+    voc_exp = complete(imputed_data, 1)$voc_exp
+  )
+
+# Check if imputation worked correctly
+summary(final_data$voc_exp)
+
+```
+
+```{r, include = FALSE}
 # Load necessary library
 final_data <- read_csv("final_data.csv")
 
@@ -222,36 +254,199 @@ if ("gender" %in% colnames(individual_vars)) {
 
 ------------------------------------------------------------------------
 
-Voice Representation - Au
+### School Diversity Attitude
+
 ```{r}
-voice_plot
+ information_plot
+
 ```
 
+------------------------------------------------------------------------
 
-Identity- Au
+### Voice Representation
 
-Gender - Gender distribution for the whole survey -Au\
-\
-Demographics: Age- Education Distribution -Au
+```{r}
+voice_plot
 
-School Diversity- Au
-
-Other variables- Au\
-\
-Highest Education Level Reached Per Country -Au
-
-Distribution of responses to QC19 - Au
+```
 
 ------------------------------------------------------------------------
+
+### Identity
+
+```{r}
+identity_plot
+
+```
+
+------------------------------------------------------------------------
+
+### Gender (distribution for the whole survey)
+
+```{r}
+gender_bar
+
+```
+
+------------------------------------------------------------------------
+
+### Religion
+
+```{r, echo = FALSE}
+religion_labels <- c(
+  "1" = "Catholic",
+  "2" = "Orthodox Christian",
+  "3" = "Protestant",
+  "4" = "Other Christian",
+  "5" = "Jewish",
+  "6" = "Muslim - Shia",
+  "7" = "Muslim - Sunni",
+  "8" = "Other Muslim",
+  "9" = "Sikh",
+  "10" = "Buddhist",
+  "11" = "Hindu",
+  "12" = "Atheist",
+  "13" = "Non believer / Agnostic",
+  "14" = "Other",
+  "15" = "Refusal",
+  "16" = "Don't Know"
+)
+
+final_data <- final_data %>%
+  filter(religion %in% names(religion_labels))
+
+# Convert religion variable to factor with specific labels
+final_data$religion1 <- factor(final_data$religion, 
+                              levels = names(religion_labels), 
+                              labels = religion_labels)
+
+# Count occurrences
+religion_counts <- final_data %>%
+  group_by(religion1) %>%
+  summarise(Count = n()) %>%
+  arrange(Count)
+
+# Calculate percentages
+religion_counts <- religion_counts %>%
+  mutate(Percentage = (Count / sum(Count)) * 100)
+
+# Create bar plot
+ggplot(religion_counts, aes(x = reorder(religion1, Count), y = Percentage, fill = religion1)) +
+  geom_bar(stat = "identity", width = 0.7) +
+  coord_flip()+
+  labs(
+    title = "Distribution of Religions",
+    x = "Religion",
+    y = "Percentage (%)",
+    fill = "Religion"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+    axis.text.x = element_text(size = 10, angle = 45, hjust = 1),
+    axis.title = element_text(size = 14, face = "bold"),
+    legend.position = "none"
+  )
+
+```
+
+------------------------------------------------------------------------
+
+### Other variables
+
+```{r}
+other_plot
+
+```
+
+------------------------------------------------------------------------
+
+### Support for Transgender Rights by Region
+
+
+
+![](support east:west.png)
+
+------------------------------------------------------------------------
+
+### Highest Education Level Reached Per Country
+
+```{r}
+education_levels <- final_data %>%
+  mutate(ISCED_Level = case_when(
+    age_edu == 00 ~ "Still Studying",  # Separate category
+    age_edu == 01 ~ "No Formal Education",  # No formal schooling
+    age_edu == 98 | age_edu == 99 ~ "Refused / Don't Know",  # Separate category
+    age_edu < 5  ~ "Pre-primary",
+    age_edu >= 5 & age_edu <= 10  ~ "Primary",
+    age_edu >= 11 & age_edu <= 14  ~ "Lower Secondary",
+    age_edu >= 15 & age_edu <= 18  ~ "Upper Secondary",
+    age_edu >= 16 & age_edu <= 19  ~ "Vocational",
+    age_edu >= 19  ~ "Tertiary",
+    TRUE ~ NA_character_
+  ))
+
+education_summary <- education_levels %>%
+  group_by(country, ISCED_Level) %>%
+  summarise(Count = n(), .groups = "drop") %>%
+  arrange(country, desc(Count))
+
+education_spending_summary <- education_summary %>%
+  left_join(final_data %>%
+              group_by(country) %>%
+              summarise(
+                Primary_Spending = mean(prim_exp, na.rm = TRUE),
+                Lower_Secondary_Spending = mean(lose_exp, na.rm = TRUE),
+                Upper_Secondary_Spending = mean(upse_exp, na.rm = TRUE),
+                Vocational_Spending = mean(voc_exp, na.rm = TRUE),
+                Tertiary_Spending = mean(ter_exp, na.rm = TRUE)
+              ), by = "country")  
+
+hchart(education_summary, "column", 
+       hcaes(x = country, y = Count, group = ISCED_Level)) %>%
+  hc_chart(
+    type = "column",
+    backgroundColor = list(
+      linearGradient = list(x1 = 0, y1 = 0, x2 = 0, y2 = 1),
+      stops = list(
+        list(0, 'white'),    
+        list(1, 'white')     
+      )
+    )
+  ) %>%
+  hc_plotOptions(column = list(stacking = "normal")) %>%  # Enable stacking
+  hc_title(text = "Highest Education Level Reached Per Country (Stacked)", 
+           style = list(color = "black", fontSize = "20px")) %>%
+  hc_xAxis(title = list(text = "Country", style = list(color = "black")), 
+           labels = list(style = list(color = "black"), rotation = -45)) %>%
+  hc_yAxis(title = list(text = "Number of Respondents", style = list(color = "black")), 
+           labels = list(style = list(color = "black")),
+           max = 1050,
+            tickInterval = 150) %>%
+ hc_colors(c("#3498db", "#f39c12", "#e74c3c", "#9b59b6", "#2ecc71", "#34495e", "#1abc9c", "#d35400")) %>% 
+   hc_legend(reversed = TRUE)%>%
+  hc_tooltip(useHTML = TRUE, 
+             pointFormat = "<b>{point.country}</b><br>
+                           Education Level: {point.ISCED_Level}<br>
+                           Respondents: {point.y}")
+
+```
+
+------------------------------------------------------------------------
+
+### Distribution of responses to QC19 (by country & gender)
+
+![](qc19 distribution.png)
+
+------------------------------------------------------------------------
+
 ## Descriptive Analysis
-### Country-Level - Gina
+### Country-Level
 
 ::: {.panel-tabset .nav-pills}
 ### GDP vs Education Spend
 ```{r}
-
-
-edueco_data <- read_csv("~/Desktop/Survey Methodology II/Survey-Methodology-Group-Project/data_cleaning_files/UNESCO Edu Country Data 2019/edueco_data.csv") 
+edueco_data <- read_csv("data_cleaning_files/UNESCO Edu Country Data 2019/edueco_data.csv") 
 
 # Prepare data
 data_2019 <- edueco_data %>%
@@ -316,7 +511,7 @@ hchart(data_2019, "bubble", hcaes(x = GDP_trillions, y = Spending_Billions,
 ### Spend Per Education Level
 ```{r}
 # Load the data
-economic_summary <- read_csv("~/Desktop/Survey Methodology II/Survey-Methodology-Group-Project/data_cleaning_files/UNESCO Edu Country Data 2019/edueco_data.csv")
+economic_summary <- read_csv("data_cleaning_files/UNESCO Edu Country Data 2019/edueco_data.csv")
 
 # First, create the summary data frame if it doesn't already exist
 economic_summary_processed <- economic_summary %>%
@@ -387,7 +582,7 @@ library(readr)
 
 # Read the data
 # Read the data
-trans_health <- read_csv("~/Desktop/Survey Methodology II/Survey-Methodology-Group-Project/data_cleaning_files/trans_health_data.csv", 
+trans_health <- read_csv("data_cleaning_files/trans_health_data.csv", 
                          show_col_types = FALSE)
 trans_health <- trans_health[, -1]  # Drop first column using base R indexing
 
@@ -481,7 +676,7 @@ ggplot(health_data_long,
   facet_grid(. ~ category, scales = "free_x", space = "free_x")
 ```
 
-##  Legal Variables
+### Legal Variables
 ```{r}
 # Load necessary libraries
 library(tidyverse)
@@ -489,7 +684,7 @@ library(readr)
 library(highcharter)
 
 # Load the dataset
-ilga_data <- read_csv("~/Desktop/Survey Methodology II/Survey-Methodology-Group-Project/data_cleaning_files/ilga_data.csv")
+ilga_data <- read_csv("data_cleaning_files/ilga_data.csv")
 
 # List of countries to include
 filtered_countries <- c(
@@ -781,7 +976,7 @@ feature importance from random forest
 ## Model Comparison 
 
 ```{r, fig.align='center'}
-knitr::include_graphics("~/Desktop/Survey Methodology II/Survey-Methodology-Group-Project/model_comparison.png")
+knitr::include_graphics("model_comparison.png")
 ```
 
 ------------------------------------------------------------------------
