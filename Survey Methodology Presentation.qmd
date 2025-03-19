@@ -1,19 +1,23 @@
 ---
 title: "Survey Methodology Presentation"
-author: "Gina, Ekin, Aurora"
-format: revealjs
+author: "Gina Tedesco, Ekin Kizildas, Aurora Sterpellone"
+date: "2025-03-19"
+format: 
+  revealjs:
+      theme: sky
+      scrollable: true
+      embed-resources: true
 editor: visual
 ---
 
-## Introduction
+## 📊 Introduction
 
 ★ Factors influencing public support for transgender rights across Europe
 
 
-★ Both individual-level factors (such as demographics, religion, and ideology), and country-level variables, (including GDP, legal frameworks, and policy environments).
+★ Both individual-level factors (such as demographics, religion, and ideology), and country-level variables, (including GDP, legal frameworks, and policy environments).  → The role of education and healthcare in shaping public attitudes
 
-
-★ The role of education and healthcare in shaping public attitudes → predictive model that can forecast support levels across different countries
+★ Predictive model that can forecast future support levels
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 library(haven)
@@ -58,7 +62,8 @@ library(tidyr)
 
 ------------------------------------------------------------------------
 
-## Data Handling
+## 🔧 Data Handling
+
 
 **Data Sources**
 
@@ -88,16 +93,12 @@ library(tidyr)
 
 ------------------------------------------------------------------------
 
-## Descriptive Analysis
+## 🔎🚶🏽‍♂️ Descriptive Analysis
 ### Individual-Level
 
 ★ Educational Attainment
 
-
-★ Gender and Regional Differences
-
-  ☆ Responses to key questions, such as Question 19
-
+★ Gender and Regional Differences  → Responses to key questions, such as Question 19
 
 ★ Attitudes Toward Diversity Education
 
@@ -258,14 +259,15 @@ if ("gender" %in% colnames(individual_vars)) {
 
 ------------------------------------------------------------------------
 
+### Individual-Level
+
+::: {.panel-tabset .nav-pills}
 ### School Diversity Attitude
 
 ```{r}
  information_plot
 
 ```
-
-------------------------------------------------------------------------
 
 ### Voice Representation
 
@@ -274,14 +276,20 @@ voice_plot
 
 ```
 
-------------------------------------------------------------------------
-
 ### Identity
 
 ```{r}
 identity_plot
 
 ```
+
+### Other variables
+
+```{r}
+other_plot
+
+```
+:::
 
 ------------------------------------------------------------------------
 
@@ -356,17 +364,7 @@ ggplot(religion_counts, aes(x = reorder(religion1, Count), y = Percentage, fill 
 
 ------------------------------------------------------------------------
 
-### Other variables
-
-```{r}
-other_plot
-
-```
-
-------------------------------------------------------------------------
-
 ### Support for Transgender Rights by Region
-
 
 
 ![](support east:west.png)
@@ -444,7 +442,7 @@ hchart(education_summary, "column",
 
 ------------------------------------------------------------------------
 
-## Descriptive Analysis
+## 🔎🗺️ Descriptive Analysis
 ### Country-Level
 
 ::: {.panel-tabset .nav-pills}
@@ -577,7 +575,9 @@ ggplot(edu_long, aes(x = expenditure, y = country)) +
 ```
 :::
 
-## Health Variables 
+------------------------------------------------------------------------
+
+### Health Variables 
 
 ```{r}
 # Improved Gender-Affirming Healthcare Visualization in R with explicit category management
@@ -679,6 +679,8 @@ ggplot(health_data_long,
   # Create facets by category with explicit ordering
   facet_grid(. ~ category, scales = "free_x", space = "free_x")
 ```
+
+------------------------------------------------------------------------
 
 ### Legal Variables
 ```{r}
@@ -836,7 +838,7 @@ hc
 
 ------------------------------------------------------------------------
 
-## Multicolinearity -Ekin
+## 🎛️ Multicolinearity
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -950,6 +952,8 @@ print(model_eco)
 
 ------------------------------------------------------------------------
 
+### Correlation Matrix
+
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 # Correcting the select() function by adding quotes around each variable name
 cor_data <- final_data %>%
@@ -969,7 +973,7 @@ corrplot(cor_matrix)
 
 ------------------------------------------------------------------------
 
-## Model Comparison 
+## 🕹️ Model Comparison 
 
 ```{r, fig.align='center'}
 knitr::include_graphics("model_comparison.png")
@@ -977,21 +981,21 @@ knitr::include_graphics("model_comparison.png")
 
 ------------------------------------------------------------------------
 
-## Prediction Models
+## 📡 Prediction Models
 
 ::: {.columns}
 ::: {.column width="50%"}
-![Predictive Model](predictive model.png)
+![](predictive model.png)
 :::
 ::: {.column width="50%"}
-![Confusion Matrix](confusion_matrix.png)
+![](confusion_matrix.png)
 :::
 :::
 
 
 ------------------------------------------------------------------------
 
-## Conclusion
+## 🏳️‍⚧️ Conclusion
 
 ```{r}
 merged_data <- read_csv ("merged_data.csv")
@@ -1073,3 +1077,9 @@ hcmap("custom/europe",
   hc_title(text = "Transgender Civil DC Support Levels in Europe")
 
 ```
+
+
+------------------------------------------------------------------------
+
+## 🫠 THANK YOU!
+### Let's go for a break now :)
