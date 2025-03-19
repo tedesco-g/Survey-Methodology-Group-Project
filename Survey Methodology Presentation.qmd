@@ -38,6 +38,12 @@ library(gbm)
 library(MLmetrics)
 library(smotefamily)
 library(fastDummies)
+library(tidyverse)
+library(dplyr)
+library(highcharter)
+library(ggplot2)    
+library(readr)      
+library(tidyr)
 
 ```
 
@@ -117,13 +123,394 @@ library(ggplot2)
 
 ### Country-Level - Gina
 
--   Economic Summary
+::: {.panel-tabset .nav-pills}
+### GDP vs Education Spend
+```{r}
 
--   GDP vs Education expenditure
 
--   Health Variables - Gina to develop this graph
+edueco_data <- read_csv("~/Desktop/Survey Methodology II/Survey-Methodology-Group-Project/data_cleaning_files/UNESCO Edu Country Data 2019/edueco_data.csv") 
 
--   Legal Variables- Gina to develop this graph
+# Prepare data
+data_2019 <- edueco_data %>%
+  drop_na(NY.GDP.MKTP.CD, SE.XPD.TOTL.GD.ZS, country) %>%
+  mutate(GDP_trillions = NY.GDP.MKTP.CD / 1e12,  # Convert GDP to Trillions USD
+         Total_Education_Spending = (NY.GDP.MKTP.CD * SE.XPD.TOTL.GD.ZS) / 100,
+         Spending_Billions = Total_Education_Spending / 1e9,  # Convert Spending to Billions USD
+         Education_Percent_GDP = round(SE.XPD.TOTL.GD.ZS, 2),  # Round % of GDP spent on education
+         Spending_Category = cut(Spending_Billions, 
+                                 breaks = c(-Inf, 20, 50, 100, Inf), 
+                                 labels = c("Low (<20B)", "Medium (20B-50B)", 
+                                            "High (50B-100B)", "Very High (>100B)")))
+
+# Explicitly Define Colors for Categories
+spending_colors <- c("#1E90FF",  # Bright Blue (Low <20B)
+                     "#FFD700",  # Gold (Medium 20B-50B)
+                     "#FF4500",  # Red-Orange (High 50B-100B)
+                     "#8B0000")  # Dark Red (Very High >100B)
+
+# Create the chart with gradient background and y-axis starting at 0
+hchart(data_2019, "bubble", hcaes(x = GDP_trillions, y = Spending_Billions, 
+                                  size = Spending_Billions, group = Spending_Category, 
+                                  name = country)) %>%
+  hc_chart(
+    backgroundColor = list(
+      linearGradient = list(x1 = 0, y1 = 0, x2 = 0, y2 = 1),
+      stops = list(
+        list(0, 'white'),    # Dark blue at the top
+        list(1, 'white')     # Near black at the bottom
+      )
+    )
+  ) %>%
+  hc_title(text = "Education Spending Patterns in Europe (2019)", 
+           style = list(color = "black", fontSize = "20px")) %>%
+  hc_subtitle(text = "Comparing GDP and Total Education Spending", 
+              style = list(color = "black", fontSize = "14px")) %>%
+  hc_xAxis(title = list(text = "GDP (Trillions USD)", style = list(color = "black")),
+           labels = list(style = list(color = "black")),
+           gridLineColor = "#444444") %>%
+  hc_yAxis(title = list(text = "Total Education Spending (Billions USD)", 
+                        style = list(color = "black")),
+           labels = list(style = list(color = "black")),
+           gridLineColor = "#444444",
+           min = 0) %>%  # Set y-axis to start at 0
+  hc_legend(layout = "horizontal", align = "right", verticalAlign = "bottom",
+            itemStyle = list(color = "black")) %>%
+  # Apply Colors Using hc_colors() 
+  hc_colors(spending_colors) %>%
+  hc_tooltip(useHTML = TRUE, 
+             backgroundColor = "white",  # White background
+             borderColor = "black",
+             style = list(color = "black", fontSize = "14px"),  # Ensure all text is black
+             formatter = JS("function() {
+               return '<b>' + this.point.name + '</b><br>' +
+                      '<b>GDP:</b> ' + Highcharts.numberFormat(this.x, 2) + 'T USD<br>' +
+                      '<b>Education Spending:</b> ' + Highcharts.numberFormat(this.y, 2) + 'B USD<br>' +
+                      '<b>% of GDP Spent on Education:</b> ' + Highcharts.numberFormat(this.point.Education_Percent_GDP, 2) + '%<br>' +
+                      '<b>Category:</b> ' + this.series.name;
+             }"))
+```
+
+### Spend Per Education Level
+```{r}
+# Load the data
+economic_summary <- read_csv("~/Desktop/Survey Methodology II/Survey-Methodology-Group-Project/data_cleaning_files/UNESCO Edu Country Data 2019/edueco_data.csv")
+
+# First, create the summary data frame if it doesn't already exist
+economic_summary_processed <- economic_summary %>%
+  group_by(country) %>%
+  summarise(
+    edu_exp_pct = mean(SE.XPD.TOTL.GD.ZS, na.rm = TRUE),  # Total education expenditure
+    preprim_exp = mean(`PrePrimary (XSPENDP.02.FDPUB.FNCUR)`, na.rm = TRUE),
+    prim_exp = mean(`Primary (XSPENDP.1.FDPUB.FNCUR)`, na.rm = TRUE),
+    lose_exp = mean(`LowerSecondary (XSPENDP.2.FDPUB.FNCUR)`, na.rm = TRUE),
+    upse_exp = mean(`UpperSecondary (XSPENDP.2T3.FDPUB.FNCUR)`, na.rm = TRUE),
+    ter_exp = mean(`Tertiary (XSPENDP.3.FDPUB.FNCUR)`, na.rm = TRUE),
+    voc_exp = mean(`VocationalTraining (XSPENDP.4.FDPUB.FNCUR)`, na.rm = TRUE)
+  )
+
+# Then continue with your visualization code
+edu_long <- economic_summary_processed %>%
+  # Sort countries by total education expenditure (high to low)
+  arrange(desc(edu_exp_pct)) %>%
+  # Convert to long format
+  pivot_longer(
+    cols = c(preprim_exp, prim_exp, lose_exp, upse_exp, ter_exp, voc_exp),
+    names_to = "level",
+    values_to = "expenditure"
+  ) %>%
+  mutate(
+    level = factor(level, 
+                  levels = c("preprim_exp", "prim_exp", "lose_exp", 
+                            "upse_exp", "ter_exp", "voc_exp"),
+                  labels = c("Pre-Primary", "Primary", "Lower Secondary", 
+                            "Upper Secondary", "Tertiary", "Vocational")),
+    # Keep countries in consistent order
+    country = factor(country, levels = unique(country))
+  )
+
+# Create lollipop chart
+ggplot(edu_long, aes(x = expenditure, y = country)) +
+  geom_segment(aes(x = 76, xend = expenditure, yend = country), 
+               color = "gray70", linewidth = 0.6) +
+  geom_point(aes(color = level), size = 3.5, alpha = 0.9) +
+  facet_wrap(~ level, scales = "free_x", ncol = 3) +
+  scale_color_brewer(palette = "Set2") +
+  scale_x_continuous(limits = c(76, 100), breaks = seq(76, 100, 2)) +
+  labs(
+    title = "Education Expenditure by Level and Country",
+    x = "Expenditure (%)",
+    y = "",
+    color = "Education Level"
+  ) +
+  theme_minimal() +
+  theme(
+    strip.background = element_rect(fill = "lightblue", color = "white"),
+    strip.text = element_text(face = "bold", size = 11),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_blank(),
+    axis.text.y = element_text(size = 9),
+    legend.position = "bottom",
+    plot.title = element_text(face = "bold", size = 14)
+  )
+```
+:::
+
+## Health Variables 
+
+```{r}
+# Improved Gender-Affirming Healthcare Visualization in R with explicit category management
+library(tidyverse)
+library(readr)
+
+# Read the data
+# Read the data
+trans_health <- read_csv("~/Desktop/Survey Methodology II/Survey-Methodology-Group-Project/data_cleaning_files/trans_health_data.csv", 
+                         show_col_types = FALSE)
+trans_health <- trans_health[, -1]  # Drop first column using base R indexing
+
+# Create a direct mapping of each service to its category and display name
+service_metadata <- tribble(
+  ~original_name,                    ~display_name,         ~category,
+  "Breast augmentation",            "Breast Aug.",        "Feminizing Surgeries",
+  "Orchiectomy",                    "Orchiectomy",        "Feminizing Surgeries",
+  "Vaginoplasty",                   "Vaginoplasty",       "Feminizing Surgeries",
+  "Facial Feminisation Surgery",    "Facial Feminisation","Feminizing Surgeries",
+  "Tracheal shave",                 "Tracheal Shave",     "Feminizing Surgeries",
+  
+  "Hysterectomy",                   "Hysterectomy",       "Masculinizing Surgeries",
+  "Ovariectomy (aka oopherectomy)", "Ovariectomy",        "Masculinizing Surgeries",
+  "Mastectomy",                     "Mastectomy",         "Masculinizing Surgeries",
+  "Metoidioplasty",                 "Metoidioplasty",     "Masculinizing Surgeries",
+  "Phalloplasty",                   "Phalloplasty",       "Masculinizing Surgeries",
+  
+  "Psychological care",             "Psychological Care", "Mental Health",
+  "Psychiatric care",               "Psychiatric Care",   "Mental Health",
+  
+  "Electrolysis / Laser Hair Removal", "Hair Removal",    "Other",
+  "HRT (Oestrogen)",                "HRT (Oestrogen)",    "Other",
+  "HRT (Testosterone)",             "HRT (Testosterone)", "Other",
+  "Vocal training",                 "Vocal Training",     "Other"
+)
+
+# Calculate coverage score for each country
+trans_health$coverage_score <- rowSums(trans_health[, -1] == 1, na.rm = TRUE) / 
+                              (ncol(trans_health) - 1) * 100
+
+# Sort countries by coverage score
+trans_health <- trans_health %>%
+  arrange(desc(coverage_score))
+
+# Prepare data for visualization - convert to long format
+health_data_long <- trans_health %>%
+  pivot_longer(
+    cols = -c(Country, coverage_score),
+    names_to = "Service",
+    values_to = "Status"
+  )
+
+# Join the category and display name information
+health_data_long <- health_data_long %>%
+  left_join(service_metadata, by = c("Service" = "original_name"))
+
+# Set explicit order for categories
+category_order <- c("Feminizing Surgeries", "Masculinizing Surgeries", "Mental Health", 
+                   "Other Procedures", "Other")
+
+# Set explicit order for services within categories
+service_order <- service_metadata %>%
+  arrange(factor(category, levels = category_order)) %>%
+  pull(display_name)
+
+# Convert to factors with specific order
+health_data_long <- health_data_long %>%
+  mutate(
+    category = factor(category, levels = category_order),
+    display_name = factor(display_name, levels = service_order),
+    Status_Label = factor(Status, levels = c(1, 2, 3),
+                         labels = c("Available", "Not Available", "Not Enough Information"))
+  )
+
+# Create the main heatmap visualization
+ggplot(health_data_long, 
+       aes(y = factor(Country, levels = rev(trans_health$Country)), 
+           x = display_name, 
+           fill = Status_Label)) +
+  geom_tile(color = "white", linewidth = 0.2) +
+  scale_fill_manual(values = c("Available" = "#2166AC", 
+                               "Not Available" = "#B2182B", 
+                               "Not Enough Information" = "gray80"),
+                    name = "Availability") +
+  theme_minimal() +
+  labs(title = "Availability of Gender-Affirming Healthcare by Country",
+       x = "Healthcare Service",
+       y = "") +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+    axis.text.y = element_text(size = 9),
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 10),
+    legend.position = "bottom",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(fill = NA, color = "gray80", linewidth = 0.5)
+  ) +
+  # Create facets by category with explicit ordering
+  facet_grid(. ~ category, scales = "free_x", space = "free_x")
+```
+
+##  Legal Variables
+```{r}
+# Load necessary libraries
+library(tidyverse)
+library(readr)
+library(highcharter)
+
+# Load the dataset
+ilga_data <- read_csv("~/Desktop/Survey Methodology II/Survey-Methodology-Group-Project/data_cleaning_files/ilga_data.csv")
+
+# List of countries to include
+filtered_countries <- c(
+  "Belgium", "Denmark", "Germany", "Greece", "Spain", "France", 
+  "Ireland", "Italy", "Luxembourg", "Netherlands", "Portugal", 
+  "United Kingdom", "Austria", "Sweden", "Finland", "Cyprus", 
+  "Czech Republic", "Estonia", "Hungary", "Latvia", "Lithuania", 
+  "Malta", "Poland", "Slovakia", "Slovenia", "Bulgaria", "Romania", "Croatia"
+)
+
+# Filter the dataset to include only the specified countries
+ilga_filtered <- ilga_data %>%
+  filter(Country %in% filtered_countries)
+
+# Clean and shorten measure names for better readability
+measure_mapping <- c(
+  "No legal framework making legal gender recognition impossible" = "Legal framework exists",
+  "Existence of legal measures" = "Legal measures exist",
+  "Existence of administrative procedures" = "Administrative procedures exist",
+  "Name change" = "Name change allowed",
+  "No age restriction, Name change" = "No age limit for name change",
+  "Self-determination" = "Self-determination model",
+  "Non-binary recognition" = "Non-binary recognition",
+  "No 'Gender Identity Disorder' diagnosis/psychological opinion required" = "No diagnosis required",
+  "No compulsory medical intervention required" = "No medical intervention required",
+  "No compulsory surgical intervention required" = "No surgical intervention required",
+  "No compulsory sterilisation required" = "No sterilization required",
+  "No compulsory divorce required" = "No divorce required",
+  "No age restriction" = "No age restriction",
+  "Legal gender recognition procedures exist for minors" = "Recognition for minors",
+  "Depathologisation" = "Depathologisation"
+)
+
+# Get the countries for each legal measure
+countries_by_measure <- ilga_filtered %>%
+  pivot_longer(cols = -Country, names_to = "Legal_Measure", values_to = "Presence") %>%
+  mutate(Legal_Measure = case_match(
+    Legal_Measure,
+    "No legal framework making legal gender recognition impossible" ~ "Legal framework exists",
+    "Existence of legal measures" ~ "Legal measures exist",
+    "Existence of administrative procedures" ~ "Administrative procedures exist",
+    "Name change" ~ "Name change allowed",
+    "No age restriction, Name change" ~ "No age limit for name change",
+    "Self-determination" ~ "Self-determination model",
+    "Non-binary recognition" ~ "Non-binary recognition",
+    "No 'Gender Identity Disorder' diagnosis/psychological opinion required" ~ "No diagnosis required",
+    "No compulsory medical intervention required" ~ "No medical intervention required",
+    "No compulsory surgical intervention required" ~ "No surgical intervention required",
+    "No compulsory sterilisation required" ~ "No sterilization required",
+    "No compulsory divorce required" ~ "No divorce required",
+    "No age restriction" ~ "No age restriction",
+    "Legal gender recognition procedures exist for minors" ~ "Recognition for minors",
+    "Depathologisation" ~ "Depathologisation",
+    .default = as.character(Legal_Measure)
+  )) %>%
+  filter(Presence == 1) %>%
+  group_by(Legal_Measure) %>%
+  summarise(
+    # Create a bullet list with one country per line
+    Countries = paste("<li>", sort(Country), "</li>", collapse = ""),
+    Count = n()
+  ) %>%
+  arrange(desc(Count))
+
+# Transform the data to long format with shortened names for the chart
+df_long <- countries_by_measure %>%
+  mutate(Percentage = Count / length(filtered_countries) * 100) %>%
+  # Create a list to store country information for tooltips
+  mutate(country_list = Countries)
+
+# Create a simple highcharter bar chart with enhanced tooltips
+hc <- highchart() %>%
+  hc_chart(
+    type = "bar",
+    style = list(fontFamily = "Segoe UI, Arial, sans-serif"),
+    backgroundColor = "#FFFFFF"
+  ) %>%
+  hc_title(
+    text = "ILGA Legal Gender Recognition Frameworks Across Selected EU Countries",
+    style = list(fontSize = "18px", fontWeight = "bold") 
+  ) %>%
+  hc_xAxis(
+    categories = df_long$Legal_Measure,
+    labels = list(style = list(fontSize = "12px"))
+  ) %>%
+  hc_yAxis(
+    title = list(text = "Number of Countries", style = list(fontSize = "13px")),
+    max = length(filtered_countries),
+    gridLineWidth = 0.5,
+    gridLineDashStyle = "Dot"
+  ) %>%
+  hc_add_series(
+    name = "Countries",
+    data = lapply(1:nrow(df_long), function(i) {
+      list(
+        y = df_long$Count[i],
+        countries = df_long$country_list[i],
+        percentage = df_long$Percentage[i],
+        color = "#219EBC"  # Set all bars to the requested color
+      )
+    })
+  ) %>%
+  hc_plotOptions(
+    bar = list(
+      dataLabels = list(
+        enabled = TRUE,
+        format = "{y}",
+        style = list(fontWeight = "bold")
+      ),
+      borderRadius = 3,
+      pointWidth = 18
+    )
+  ) %>%
+  # Custom tooltip showing countries in a vertical list
+  hc_tooltip(
+    useHTML = TRUE,
+    headerFormat = "<div style='font-size: 14px; font-weight: bold; margin-bottom: 8px;'>{point.key}</div>",
+    pointFormatter = JS("function() {
+      return '<div style=\"width: 220px;\">' +
+             '<div style=\"margin: 5px 0;\"><b>' + this.y + '</b> countries (' + 
+             Math.round(this.percentage) + '%)</div>' +
+             '<div style=\"margin-top: 10px; max-height: 200px; overflow-y: auto;\">' +
+             '<b>Countries:</b>' +
+             '<ul style=\"margin-top: 5px; padding-left: 20px;\">' + 
+             this.countries + 
+             '</ul></div>' +
+             '</div>';
+    }"),
+    backgroundColor = "rgba(255, 255, 255, 0.98)",
+    borderWidth = 1,
+    borderColor = "black",
+    padding = 10,
+    style = list(fontSize = "12px")
+  ) %>%
+  hc_legend(enabled = FALSE) %>%  # Disable legend since all bars are the same color
+  hc_credits(
+    enabled = TRUE,
+    text = "Source: ILGA Europe",
+    style = list(fontSize = "10px")
+  )
+
+# Display the chart
+hc
+```
 
 ------------------------------------------------------------------------
 
@@ -268,9 +655,11 @@ feature importance from random forest
 
 ------------------------------------------------------------------------
 
-## Model Comparison and/ or Confusion matrix
+## Model Comparison 
 
--   maybe a chart for cpomparison
+```{r, fig.align='center'}
+knitr::include_graphics("~/Desktop/Survey Methodology II/Survey-Methodology-Group-Project/model_comparison.png")
+```
 
 ------------------------------------------------------------------------
 
