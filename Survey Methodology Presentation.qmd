@@ -6,11 +6,12 @@ editor: visual
 ---
 
 ## Introduction
-**The purpose of the project**
 
 ★ Factors influencing public support for transgender rights across Europe
 
+
 ★ Both individual-level factors (such as demographics, religion, and ideology), and country-level variables, (including GDP, legal frameworks, and policy environments).
+
 
 ★ The role of education and healthcare in shaping public attitudes → predictive model that can forecast support levels across different countries
 
@@ -92,9 +93,11 @@ library(tidyr)
 
 ★ Educational Attainment
 
+
 ★ Gender and Regional Differences
 
   ☆ Responses to key questions, such as Question 19
+
 
 ★ Attitudes Toward Diversity Education
 
