@@ -965,19 +965,25 @@ corrplot(cor_matrix)
 
 ------------------------------------------------------------------------
 
-## Prediction Models- Gina
-
-what models were used and why + their results
-
-feature importance from random forest
-
-------------------------------------------------------------------------
-
 ## Model Comparison 
 
 ```{r, fig.align='center'}
 knitr::include_graphics("model_comparison.png")
 ```
+
+------------------------------------------------------------------------
+
+## Prediction Models
+
+::: {.columns}
+::: {.column width="50%"}
+![Predictive Model](predictive model.png)
+:::
+::: {.column width="50%"}
+![Confusion Matrix](confusion_matrix.png)
+:::
+:::
+
 
 ------------------------------------------------------------------------
 
