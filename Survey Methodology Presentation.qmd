@@ -5,6 +5,7 @@ editor: visual
 ---
 
 ## Technical Things
+
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 library(haven)
 library(tidyverse)
@@ -40,9 +41,6 @@ library(fastDummies)
 
 ```
 
-
-
-
 ## Introduction- Auuu
 
 **Purpose of the project?**
@@ -69,11 +67,19 @@ This project highlights the importance of understanding the multifaceted nature 
 
 -   *ILGA Data*
 
+---
+
+## First Imputation 
+
 ![](images/clipboard-4112000975.png)
 
 ------------------------------------------------------------------------
 
+## Second Imputation
+
 ![](images/clipboard-1135736898.png)
+
+---
 
 ![](images/clipboard-2955755552.png)
 
@@ -82,6 +88,7 @@ This project highlights the importance of understanding the multifaceted nature 
 ------------------------------------------------------------------------
 
 ## Descriptive Analysis
+
 ### Individual-Level
 
 Voice Representation - Au
@@ -106,7 +113,6 @@ library(ggplot2)
 
 ```
 
-
 ------------------------------------------------------------------------
 
 ### Country-Level - Gina
@@ -123,9 +129,134 @@ library(ggplot2)
 
 ## Multicolinearity -Ekin
 
-Summary of Individual & Country- Final Data
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 
--   how do individual responses compare to country level data
+final_data <- read_csv("final_data.csv")
+
+# Convert to an ordered factor
+final_data$transgender_civil_dc1 <- factor(final_data$transgender_civil_dc, 
+                                          levels = c(2, 3, 1), 
+                                          labels = c("Oppose", "Don't Know", "Support"),
+                                          ordered = TRUE)
+
+religion_labels <- c(
+  "1" = "Catholic",
+  "2" = "Orthodox Christian",
+  "3" = "Protestant",
+  "4" = "Other Christian",
+  "5" = "Jewish",
+  "6" = "Muslim - Shia",
+  "7" = "Muslim - Sunni",
+  "8" = "Other Muslim",
+  "9" = "Sikh",
+  "10" = "Buddhist",
+  "11" = "Hindu",
+  "12" = "Atheist",
+  "13" = "Non believer / Agnostic",
+  "14" = "Other",
+  "15" = "Refusal",
+  "16" = "Don't Know"
+)
+
+final_data <- final_data %>%
+  filter(religion %in% names(religion_labels))
+
+# Convert religion variable to factor with specific labels
+final_data$religion1 <- factor(final_data$religion, 
+                              levels = names(religion_labels), 
+                              labels = religion_labels)
+
+
+final_data$ideo1 <- scale(final_data$ideo)  
+
+control_settings <- glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000))
+
+model1<- glmer(transgender_civil_dc1 ~ gender + religion1 + ideo + 
+                  (1 | iso3c), 
+                data = final_data, 
+                family = binomial, 
+                control = control_settings)
+
+
+
+plot_model(model1, type = "est", show.values = TRUE, title = "Effect of Variables on Support for Transgender Rights")
+```
+
+------------------------------------------------------------------------
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Model with a quadratic term for gender
+final_data$gender_squared <- final_data$gender^2
+
+model2 <- glmer(transgender_civil_dc1 ~ gender + gender_squared + religion1 + ideo1 + (1 | iso3c),
+                data = final_data,
+                family = binomial,
+                control = glmerControl(optimizer = "bobyqa"))
+
+# Summary of the model
+summary(model2, correlation = TRUE)
+
+# Get covariance matrix for the fixed effects coefficients
+vcov(model2)
+```
+
+------------------------------------------------------------------------
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+model_multinomial <- multinom(transgender_civil_dc1 ~ gender + religion1 + ideo1,
+                              data = final_data)
+
+summary(model_multinomial)
+```
+
+------------------------------------------------------------------------
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# Define training control for cross-validation (10-fold cross-validation)
+train_control <- trainControl(method = "cv", number = 10)
+
+# Train the model using multinomial logistic regression with cross-validation
+cv_model <- train(transgender_civil_dc1 ~ gender + religion1 + ideo1,
+                  data = final_data,
+                  method = "multinom",  # Multinomial logistic regression
+                  trControl = train_control)
+
+
+# Confusion matrix for the cross-validation model
+confusionMatrix(cv_model)
+```
+
+------------------------------------------------------------------------
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+model_eco <- lm(transgender_civil_dc ~ gdp+ edu_exp_pct +preprim_exp + prim_exp +  lose_exp +upse_exp+  ter_exp+ voc_exp,
+                    data = final_data)
+
+
+print(model_eco)
+
+```
+
+------------------------------------------------------------------------
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# Correcting the select() function by adding quotes around each variable name
+cor_data <- final_data %>%
+  dplyr::select("gender", "religion", "ideo", "gdp", "edu_exp_pct", "preprim_exp", "prim_exp", "lose_exp", 
+         "upse_exp", "ter_exp", "voc_exp", "psychological.care", "psychiatric.care", "nolger", 
+         "exist_lgme", "exist_adm", "name_change", "self_det")
+
+# Compute the correlation matrix
+cor_matrix <- cor(cor_data, use = "complete.obs")
+
+```
+
+```{r}
+corrplot(cor_matrix)
+
+```
 
 ------------------------------------------------------------------------
 
@@ -146,7 +277,7 @@ feature importance from random forest
 ## Conclusion
 
 ```{r}
-final_data <- read.csv("final_data.csv")
+merged_data <- read_csv ("merged_data.csv")
 
 # Define country codes and sample values
 country_codes <- data.frame(
@@ -156,42 +287,45 @@ country_codes <- data.frame(
               "Romania", "Slovenia", "Croatia", "Germany"),
   iso3c = c("BEL", "DNK", "GRC", "ESP", "FIN", "FRA", "IRL", "ITA", "LUX", "NLD", 
            "AUT", "PRT", "SWE", "BGR", "CYP", "CZE", "EST", "HUN", "LVA", "LTU", 
-           "MLT", "POL", "ROU", "SVN", "HRV",) # ISO-3 Codes
+           "MLT", "POL", "ROU", "SVN", "HRV", "DEU") # ISO-3 Codes
 )
 
 
 percentage <- final_data %>%
   group_by(iso3c) |>
-  count(transgender_civil_dc) %>%  
+  count(transgender_civil_dc) %>%  # Count occurrences of each unique value
   mutate(percentage = (n / sum(n)) * 100) 
 
 percentage <- percentage%>%
   left_join(country_codes, by = "iso3c")
 
-# Aggregate data and handle missing values
+library(dplyr)
+library(highcharter)
+
+# Aggregate data and handle missing values correctly
 aggregated_data <- percentage %>%
   group_by(iso3c) %>%
   summarise(
+    country = country_codes$country[match(iso3c, country_codes$iso3c)],  # Add country name
     tooltip_text = paste0(
-      "<b>Yes:</b> ", ifelse(any(transgender_civil_dc == 1), 
-                              round(percentage[transgender_civil_dc == 1], 1), "0"), "%<br>",
-      "<b>No:</b> ", ifelse(any(transgender_civil_dc == 2), 
-                             round(percentage[transgender_civil_dc == 2], 1), "0"), "%<br>",
-      "<b>DK:</b> ", ifelse(any(transgender_civil_dc == 3), 
-                             round(percentage[transgender_civil_dc == 3], 1), "0"), "%"
+      "<b>", country, "</b><br>",
+      "<b>Yes:</b> ", round(sum(percentage[transgender_civil_dc == 1], na.rm = TRUE), 1), "%<br>",
+      "<b>No:</b> ", round(sum(percentage[transgender_civil_dc == 2], na.rm = TRUE), 1), "%<br>",
+      "<b>DK:</b> ", round(sum(percentage[transgender_civil_dc == 3], na.rm = TRUE), 1), "%"
     ),
-    dominant_dc = transgender_civil_dc[which.max(percentage)] # Get dominant category
+    dominant_dc = transgender_civil_dc[which.max(percentage)]  # Get the dominant category
   ) %>%
   ungroup()
 
-
+# Generate Highcharts map
 hcmap("custom/europe", 
       data = aggregated_data,
       name = "Transgender Civil DC Levels",
-      joinBy = c("iso-a3", "iso3c"),  # Ensure correct mapping
-      value = "dominant_dc",  # Color based on dominant category
+      joinBy = c("iso-a3", "iso3c"),  
+      value = "dominant_dc",
       dataLabels = list(enabled = TRUE, format = '{point.name}'),
-      borderColor = "#ffffff") %>%
+      borderColor = "#ffffff"
+) %>%
   hc_colorAxis(dataClasses = list(
     list(from = 1, to = 1, color = "#007bff", name = "Yes"),      # Blue for Yes
     list(from = 2, to = 2, color = "#ffd700", name = "No"),      # Yellow for No
@@ -207,17 +341,18 @@ hcmap("custom/europe",
     style = list(fontSize = "14px", padding = "12px")
   ) %>%
   hc_chart(
-    width = 550,  # Increase width for a broader view
+    width = 550,  
     height = 550, 
     map= list(
-      zoom = 0.3,  # Daha uzak bir görünüm sağlar
-      center = list(latitude = 50, longitude = 10)  # Avrupa'nın merkezine odaklanır
+      zoom = 0.3,  
+      center = list(latitude = 50, longitude = 10)  
     )
   ) %>%
   hc_mapNavigation(
-    enabled = TRUE,  # Allow zooming manually
-    enableButtons = TRUE,  # Enable zoom control buttons
-    enableMouseWheelZoom = FALSE  # Disable automatic mouse zoom for better control
+    enabled = TRUE,  
+    enableButtons = TRUE,  
+    enableMouseWheelZoom = FALSE  
   ) %>%
   hc_title(text = "Transgender Civil DC Support Levels in Europe")
+
 ```
