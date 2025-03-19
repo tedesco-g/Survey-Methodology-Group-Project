@@ -70,13 +70,13 @@ library(tidyr)
 
 ---
 
-## First Imputation 
+### First Imputation 
 
 ![](images/clipboard-4112000975.png)
 
 ------------------------------------------------------------------------
 
-## Second Imputation
+### Second Imputation
 
 ![](images/clipboard-1135736898.png)
 
