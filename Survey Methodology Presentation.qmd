@@ -1,5 +1,6 @@
 ---
 title: "Survey Methodology Presentation"
+author: "Gina, Ekin, Aurora"
 format: revealjs
 editor: visual
 ---
