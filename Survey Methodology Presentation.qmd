@@ -94,10 +94,139 @@ This project highlights the importance of understanding the multifaceted nature 
 ------------------------------------------------------------------------
 
 ## Descriptive Analysis
-
 ### Individual-Level
 
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# Load necessary library
+final_data <- read_csv("final_data.csv")
+
+#  only individual-level variables
+individual_vars <- final_data %>%
+  dplyr::select(gender, age_edu_5cat, age_edu_11cat, polintr, natvoice, euvoice, relig, 
+         roma, skin, sexdiscr, transdiscr, school_div_transgender, 
+         school_div_sexual_orientation, school_div_intersex, transgender_civil_dc)
+
+# Function to Categorize Variables
+categorize_variables <- function(var_name) {
+  if (var_name %in% c("age_edu_5cat", "age_edu_11cat", "skin")) {
+    return("Demographics")
+  } else if (var_name %in% c("school_div_intersex", "school_div_sexual_orientation", "school_div_transgender")) {
+    return("School Should Give Information Measures")
+  } else if (var_name %in% c("natvoice", "euvoice")) {
+    return("Voice Representation")
+  } else if (var_name %in% c("relig", "roma")) {
+    return("Identity")
+  } else {
+    return("Other Variables")
+  }
+}
+
+# Prepare Data
+improved_data <- individual_vars %>%
+  pivot_longer(cols = everything(), names_to = "Variable", values_to = "Value") %>%
+  mutate(
+    Variable_Group = sapply(Variable, categorize_variables),
+    Variable_Label = case_when(
+      Variable == "age_edu_5cat" ~ "Age-Education (5 cat)",
+      Variable == "age_edu_11cat" ~ "Age-Education (11 cat)",
+      Variable == "skin" ~ "Skin Color",
+      Variable == "school_div_intersex" ~ "School Diversity (Intersex)",
+      Variable == "school_div_sexual_orientation" ~ "School Diversity (Sexual Orientation)",
+      Variable == "school_div_transgender" ~ "School Diversity (Transgender)",
+      Variable == "natvoice" ~ "Native Voice",
+      Variable == "euvoice" ~ "European Voice",
+      Variable == "polintr" ~ "Political Interest",
+      Variable == "relig" ~ "Religion",
+      Variable == "roma" ~ "Roma Identity",
+      Variable == "sexdiscr" ~ "Sexual Discrimination",
+      Variable == "transdiscr" ~ "Transgender Discrimination",
+      TRUE ~ Variable
+    )
+  )
+
+# Function to Create Histograms
+create_improved_histogram <- function(data, group_name) {
+  filtered_data <- data %>% filter(Variable_Group == group_name)
+
+  ggplot(filtered_data, aes(x = Value)) +
+    geom_histogram(bins = 15, color = "white", fill = "blue", alpha = 0.9) +
+    facet_wrap(~replace_na(Variable_Label, "Unknown"), scales = "free", ncol = 2) +
+    labs(
+      title = paste("Distribution of", group_name),
+      x = "Value",
+      y = "Frequency",
+      caption = "Values shown as frequencies rather than percentages for better readability"
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(
+      plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+      axis.title = element_text(size = 12, face = "bold"),
+      axis.text.x = element_text(angle = 30, hjust = 1, size = 10),
+      axis.text.y = element_text(size = 10),
+      strip.text = element_text(size = 12, face = "bold"),
+      strip.background = element_rect(fill = "lightgray", color = NA),
+      panel.spacing = unit(1, "lines"),
+      legend.position = "right",
+    )
+}
+
+# Generate Histograms
+demographics_plot <- create_improved_histogram(improved_data, "Demographics")
+information_plot <- create_improved_histogram(improved_data, "School Should Give Information Measures")
+voice_plot <- create_improved_histogram(improved_data, "Voice Representation")
+identity_plot <- create_improved_histogram(improved_data, "Identity")
+other_plot <- create_improved_histogram(improved_data, "Other Variables")
+
+# Function to Create Bar Charts
+create_bar_chart <- function(data, variable_name) {
+  if (!variable_name %in% colnames(data)) {
+    stop(paste("Error: Column", variable_name, "not found in data!"))
+  }
+
+  var_data <- data %>%
+    dplyr::select(all_of(variable_name)) %>%
+    rename(Value = all_of(variable_name)) %>%
+    drop_na() %>%  # Remove missing values
+    group_by(Value) %>%
+    summarize(Count = n(), .groups = "drop") %>%
+    mutate(
+      Percentage = Count / sum(Count) * 100,
+      Value = factor(Value)
+    )
+
+  var_label <- improved_data %>%
+    filter(Variable == variable_name) %>%
+    pull(Variable_Label) %>%
+    unique()
+
+  if (length(var_label) == 0) {
+    var_label <- variable_name
+  }
+
+  ggplot(var_data, aes(x = Value, y = Percentage, fill = Percentage)) +
+    geom_bar(stat = "identity", width = 0.7) +
+    geom_text(aes(label = sprintf("%.1f%%", Percentage)), position = position_stack(vjust = 0.5), color = "black") +
+    labs(title = paste("Distribution of", var_label), x = "Category", y = "Percentage (%)") +
+    theme_minimal()
+}
+
+# Generate Bar Chart for Gender
+if ("gender" %in% colnames(individual_vars)) {
+  gender_bar <- create_bar_chart(individual_vars, "gender")
+} else {
+  print("Warning: The column 'gender' is missing from the dataset!")
+}
+
+
+```
+
+------------------------------------------------------------------------
+
 Voice Representation - Au
+```{r}
+voice_plot
+```
+
 
 Identity- Au
 
@@ -113,14 +242,8 @@ Highest Education Level Reached Per Country -Au
 
 Distribution of responses to QC19 - Au
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
-# Load necessary library
-library(ggplot2)
-
-```
-
 ------------------------------------------------------------------------
-
+## Descriptive Analysis
 ### Country-Level - Gina
 
 ::: {.panel-tabset .nav-pills}
