@@ -1,7 +1,10 @@
 ---
 title: "Survey Methodology Group Prj"
 author: "Ekin, Gina, and Aurora"
-format: html
+format:
+  html:
+    self-contained: true
+    embed-resources: true
 editor: visual
 toc: true
 toc-depth: 4
